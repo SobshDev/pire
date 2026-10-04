@@ -99,7 +99,7 @@ function vaultModule({ symbols }: VaultBuild): { module: ProgramModule; labels: 
     { label: "check_code", b: "48:894C24 08", m: "mov", o: "qword ptr ss:[rsp+8],rcx", run: (m) => m.st(m.sp(8), 8, "rcx") },
     { b: "48:83EC 28", m: "sub", o: "rsp,28", run: (m) => m.sub("rsp", 0x28) },
     {
-      b: [6, (c) => "8B05 " + rel32(c.next, DATA.g_attempts)], m: "mov", o: "eax,dword ptr ds:[" + dat("g_attempts") + "]",
+      label: "check_code.load", b: [6, (c) => "8B05 " + rel32(c.next, DATA.g_attempts)], m: "mov", o: "eax,dword ptr ds:[" + dat("g_attempts") + "]",
       run: (m) => m.set("eax", m.ld(DATA.g_attempts, 4)), info: dataInfo(4, "g_attempts", "eax"),
     },
     { b: "FFC0", m: "inc", o: "eax", run: (m) => m.inc("eax") },

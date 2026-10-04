@@ -1,6 +1,7 @@
 import { type CatalogModule, Lesson } from "./schema";
 import type { Recording } from "./machine/types";
 import { tourOfTheInterface } from "./modules/m1/l1-tour-of-the-interface";
+import { controllingExecution } from "./modules/m1/l2-controlling-execution";
 import { vaultRecordings } from "./specimens/vault";
 
 export * from "./schema";
@@ -23,7 +24,7 @@ export function getRecording(id: string): Recording {
 
 /** Every playable lesson, validated when the module loads so bad content fails fast. */
 export const lessons: Record<string, Lesson> = Object.fromEntries(
-  [tourOfTheInterface].map((input) => {
+  [tourOfTheInterface, controllingExecution].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];
     for (const id of used) if (!recordings[id]) throw new Error(lesson.id + " uses unknown recording " + id);
