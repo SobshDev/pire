@@ -1,0 +1,50 @@
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "tailwindcss";
+
+/* Design tokens, taken from the PIre Paper file (Module 1 lesson screens). */
+@theme {
+  --font-sans: "Geist Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+
+  --color-ink: #0d0c0a; /* app background */
+  --color-panel: #121110; /* x64dbg panes */
+  --color-raised: #171513; /* chips, keycaps, active tabs */
+  --color-line: #2a2620; /* pane borders and dividers */
+  --color-fg: #ece7de;
+  --color-muted: #948d81;
+  --color-faint: #4f493f;
+  --color-comment: #8a8273;
+  --color-mnemonic: #f2e3c4;
+  --color-amber: #ffb224;
+  --color-amber-dim: #8a6516;
+  --color-amber-line: #3a2c10;
+  --color-guide: #16120b; /* guide panel and top bar */
+  --color-rip: #2b2110; /* RIP row, current source line */
+  --color-ok: #7dd181;
+  --color-ok-bg: #14200f;
+  --color-bad: #e5484d;
+  --color-bad-bg: #2a1213;
+  --color-paused: #f5d547;
+  --color-paused-fg: #1a1600;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    font-family: var(--font-sans);
+    font-synthesis: none;
+  }
+  ::selection {
+    background: var(--color-amber-dim);
+  }
+}
+
+@utility pane-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}

@@ -1,0 +1,284 @@
+import { useDraggable } from "@dnd-kit/core";
+import type { Lesson, Step } from "@pire/content";
+import { AnimatePresence, motion } from "motion/react";
+import { useState, type ReactNode } from "react";
+import type { LessonEvent, LessonState } from "../engine/lesson";
+import { cx, Keycap } from "../ui/bits";
+
+interface GuideProps {
+  lesson: Lesson;
+  state: LessonState;
+  dispatch(event: LessonEvent): void;
+  sourceOpen: boolean;
+}
+
+export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
+  const step = lesson.steps[state.stepIndex];
+  if (!step) return <aside className="w-85 shrink-0 border-l border-amber-line bg-guide" />;
+
+  const sameSection = lesson.steps.filter((s) => s.section === step.section);
+  const position = lesson.steps.slice(0, state.stepIndex + 1).filter((s) => s.section === step.section).length;
+  const kicker = (step.section === "beat" ? "Beat " : "Checkpoint ") + position + " · " + step.kind;
+  const sourceRegion = step.source ?? (sourceOpen ? "" : undefined);
+
+  return (
+    <aside className="flex w-85 shrink-0 flex-col border-l border-amber-line bg-guide" aria-label="Guide">
+      <div className="shrink-0 px-5 pt-4">
+        <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.12em] uppercase">
+          <span className="text-amber" data-testid="guide-kicker">{kicker}</span>
+          <span className="text-muted">{position + " / " + sameSection.length}</span>
+        </div>
+        <div className="mt-2.5 flex gap-0.75">
+          {lesson.steps.map((s, i) => (
+            <span
+              key={i}
+              className={cx(
+                "h-1 grow rounded-full transition-colors duration-300",
+                i < state.stepIndex || (i === state.stepIndex && state.phase === "success")
+                  ? "bg-amber"
+                  : i === state.stepIndex
+                    ? "bg-amber-dim"
+                    : "bg-line",
+                s.section === "checkpoint" && lesson.steps[i - 1]?.section === "beat" && "ml-2",
+              )}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="pane-scroll min-h-0 grow overflow-y-auto px-5 pt-5 pb-6">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={state.stepIndex}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18 }}
+            className="flex flex-col gap-4"
+          >
+            <h2 className="text-lg/6 font-semibold text-fg">{step.title}</h2>
+            <p className="text-[15px]/5.75 text-fg">{step.say}</p>
+            {step.action && state.phase === "asking" && <ActionRow>{step.action}</ActionRow>}
+            <GateUI step={step} state={state} dispatch={dispatch} />
+            <FeedbackBox state={state} step={step} dispatch={dispatch} />
+            {step.hints.length > 0 && state.phase === "asking" && state.hintsShown < step.hints.length && (
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "hint" })}
+                className="self-start text-xs text-muted underline decoration-faint underline-offset-4 hover:text-amber"
+              >
+                {"Need a hint? (" + (step.hints.length - state.hintsShown) + " left)"}
+              </button>
+            )}
+            {sourceRegion !== undefined && <SourceCard lesson={lesson} region={sourceRegion} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2 border-t border-amber-line px-5 py-3">
+        <span className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Keys</span>
+        {state.keys.length === 0 ? (
+          <span className="text-xs text-faint">none yet</span>
+        ) : (
+          state.keys.map((k) => <Keycap key={k}>{k}</Keycap>)
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function ActionRow({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-md border border-amber-line bg-[#1C160C] px-3 py-2.5 text-sm text-amber">
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden className="shrink-0">
+        <path d="M3 2l10 6-4.5 1.2L6.5 14z" fill="currentColor" />
+      </svg>
+      {children}
+    </div>
+  );
+}
+
+function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dispatch(e: LessonEvent): void }) {
+  const gate = step.gate;
+  const answered = state.phase === "success";
+  switch (gate.type) {
+    case "continue":
+      return (
+        <button type="button" onClick={() => dispatch({ type: "continue" })} className={primary}>
+          {gate.label}
+          <Keycap small>↵</Keycap>
+        </button>
+      );
+    case "choose":
+      return (
+        <div className="flex flex-col gap-2">
+          {gate.options.map((o, i) => {
+            const picked = state.chosen === o.id;
+            const right = picked && answered;
+            const wrong = picked && !answered && state.feedback?.tone === "wrong";
+            return (
+              <button
+                key={o.id}
+                type="button"
+                disabled={answered}
+                onClick={() => dispatch({ type: "choose", id: o.id })}
+                className={cx(
+                  "flex items-start gap-3 rounded-md border px-3 py-2.5 text-left text-sm/5 text-fg transition-colors",
+                  right ? "border-ok bg-ok-bg" : wrong ? "border-bad bg-bad-bg" : "border-line bg-ink hover:border-amber-dim",
+                  answered && !picked && "opacity-50",
+                )}
+              >
+                <span className={cx("font-mono text-xs/5", right ? "text-ok" : "text-amber")}>{String.fromCharCode(65 + i)}</span>
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      );
+    case "predict":
+      return answered ? null : <PredictInput key={state.stepIndex} placeholder={gate.placeholder} dispatch={dispatch} />;
+    case "match":
+      return (
+        <div className="flex flex-col gap-2">
+          {gate.items.map((item) => (
+            <Chip key={item.label} label={item.label} placed={!!state.placed[item.label]} />
+          ))}
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
+const primary =
+  "flex h-9 items-center justify-center gap-2 self-start rounded-md bg-amber px-4 text-sm font-medium text-ink hover:brightness-110";
+
+function PredictInput({ placeholder, dispatch }: { placeholder: string; dispatch(e: LessonEvent): void }) {
+  const [value, setValue] = useState("");
+  return (
+    <form
+      className="flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (value.trim()) dispatch({ type: "predict", value });
+      }}
+    >
+      <input
+        autoFocus
+        aria-label="Your answer"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={placeholder}
+        spellCheck={false}
+        className="h-9 min-w-0 grow rounded-md border border-line bg-ink px-3 font-mono text-[13px] text-fg outline-none placeholder:text-faint focus:border-amber-dim"
+      />
+      <button type="submit" className={primary}>
+        Check
+      </button>
+    </form>
+  );
+}
+
+export function ChipBody({ label, state }: { label: string; state: "idle" | "dragging" | "placed" | "overlay" }) {
+  return (
+    <div
+      className={cx(
+        "flex h-9 items-center justify-between gap-3 rounded-[18px] border px-4 text-[13px]",
+        state === "placed" && "border-ok bg-ok-bg text-fg",
+        state === "idle" && "cursor-grab border-amber-dim bg-[#1C160C] text-fg hover:border-amber",
+        state === "dragging" && "border-dashed border-line text-faint",
+        state === "overlay" && "cursor-grabbing border-amber bg-[#1C160C] text-fg shadow-2xl",
+      )}
+    >
+      <span>{label}</span>
+      <span className={cx("font-mono text-[9px] tracking-[0.12em]", state === "placed" ? "text-ok" : "text-muted")}>
+        {state === "placed" ? "✓ PLACED" : state === "dragging" ? "DRAGGING" : "DRAG"}
+      </span>
+    </div>
+  );
+}
+
+function Chip({ label, placed }: { label: string; placed: boolean }) {
+  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: label, disabled: placed });
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes} data-chip={label} className="touch-none">
+      <ChipBody label={label} state={placed ? "placed" : isDragging ? "dragging" : "idle"} />
+    </div>
+  );
+}
+
+function FeedbackBox({ state, step, dispatch }: { state: LessonState; step: Step; dispatch(e: LessonEvent): void }) {
+  if (state.phase === "success") {
+    return (
+      <Box tone="ok" title="Correct">
+        {step.success}
+        <button type="button" onClick={() => dispatch({ type: "continue" })} className={cx(primary, "mt-3")}>
+          Continue
+          <Keycap small>↵</Keycap>
+        </button>
+      </Box>
+    );
+  }
+  if (!state.feedback) return null;
+  const { tone, text } = state.feedback;
+  return (
+    <Box key={text} tone={tone} title={tone === "wrong" ? "Not quite" : tone === "hint" ? "Hint" : "Heads up"}>
+      {text}
+    </Box>
+  );
+}
+
+function Box({ tone, title, children }: { tone: "ok" | "wrong" | "hint" | "info"; title: string; children: ReactNode }) {
+  return (
+    <motion.div
+      role="status"
+      initial={{ opacity: 0, x: tone === "wrong" ? -4 : 0 }}
+      animate={{ opacity: 1, x: 0 }}
+      className={cx(
+        "relative overflow-hidden rounded-md py-3 pr-3.5 pl-4.5 text-sm/5.5 text-fg",
+        tone === "ok" && "bg-ok-bg",
+        tone === "wrong" && "bg-bad-bg",
+        (tone === "hint" || tone === "info") && "bg-[#1C160C]",
+      )}
+    >
+      <span
+        className={cx(
+          "absolute inset-y-0 left-0 w-0.75",
+          tone === "ok" ? "bg-ok" : tone === "wrong" ? "bg-bad" : "bg-amber",
+        )}
+      />
+      <p className={cx("mb-1 text-[13px] font-semibold", tone === "ok" ? "text-ok" : tone === "wrong" ? "text-bad" : "text-amber")}>
+        {title}
+      </p>
+      <div className="flex flex-col">{children}</div>
+    </motion.div>
+  );
+}
+
+function SourceCard({ lesson, region }: { lesson: Lesson; region: string }) {
+  const lines = lesson.source.code.split("\n");
+  const range = lesson.source.regions[region];
+  const [from, to] = range ?? [1, lines.length];
+  const start = range ? Math.max(1, from - 3) : 1;
+  const end = range ? Math.min(lines.length, to + 3) : lines.length;
+  return (
+    <div className="overflow-hidden rounded-md border border-line bg-ink" data-testid="source-card">
+      <div className="flex items-center justify-between border-b border-line px-3 py-1.5">
+        <span className="font-mono text-[11px] text-muted">{lesson.source.name}</span>
+        <span className="text-[10px] text-faint">the C you're looking at</span>
+      </div>
+      <pre className="pane-scroll max-h-72 overflow-auto py-1.5 font-mono text-[11.5px]/4.75">
+        {lines.slice(start - 1, end).map((line, i) => {
+          const n = start + i;
+          const hot = !!range && n >= from && n <= to;
+          return (
+            <div key={n} className={cx("flex pr-3", hot && "bg-rip")}>
+              <span className={cx("w-8 shrink-0 pr-2 text-right", hot ? "text-amber" : "text-faint")}>{n}</span>
+              <span className={hot ? "text-fg" : "text-muted"}>{line || " "}</span>
+            </div>
+          );
+        })}
+      </pre>
+    </div>
+  );
+}

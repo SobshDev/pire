@@ -1,0 +1,12 @@
+{
+  "name": "pire",
+  "private": true,
+  "workspaces": ["web", "content"],
+  "scripts": {
+    "dev": "bun run --cwd web dev",
+    "build": "bun run --cwd web build",
+    "test": "bun run --cwd web test",
+    "e2e": "bun run --cwd web e2e",
+    "typecheck": "bun run --cwd content typecheck && bun run --cwd web typecheck"
+  }
+}

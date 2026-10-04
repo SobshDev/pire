@@ -1,0 +1,88 @@
+import type { QueryClient } from "@tanstack/react-query";
+import {
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+  Link,
+  notFound,
+  Outlet,
+  redirect,
+} from "@tanstack/react-router";
+import { getLesson } from "@pire/content";
+import { meQuery, progressQuery } from "./api/queries";
+import { CatalogPage } from "./routes/catalog";
+import { LoginPage, RegisterPage } from "./routes/auth";
+import { LearnPage } from "./routes/learn";
+
+interface RouterContext {
+  queryClient: QueryClient;
+}
+
+const rootRoute = createRootRouteWithContext<RouterContext>()({
+  component: Outlet,
+  notFoundComponent: () => (
+    <div className="flex h-full flex-col items-center justify-center gap-3">
+      <p className="text-muted">That page doesn't exist.</p>
+      <Link to="/" className="text-amber hover:underline">
+        Back to the course
+      </Link>
+    </div>
+  ),
+});
+
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
+  loader: ({ context }) => context.queryClient.ensureQueryData(meQuery),
+  component: CatalogPage,
+});
+
+/** Only same-site paths are allowed as a post-login destination. */
+export function safeRedirect(value: unknown): string | undefined {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : undefined;
+}
+
+const authSearch = (search: Record<string, unknown>): { redirect?: string } => {
+  const to = safeRedirect(search.redirect);
+  return to ? { redirect: to } : {};
+};
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  validateSearch: authSearch,
+  component: LoginPage,
+});
+
+const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/register",
+  validateSearch: authSearch,
+  component: RegisterPage,
+});
+
+const learnRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/learn/$lessonId",
+  beforeLoad: async ({ context, location }) => {
+    const me = await context.queryClient.ensureQueryData(meQuery);
+    if (!me) throw redirect({ to: "/register", search: { redirect: location.href } });
+  },
+  loader: async ({ context, params }) => {
+    if (!getLesson(params.lessonId)) throw notFound();
+    await context.queryClient.ensureQueryData(progressQuery);
+  },
+  component: LearnPage,
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, loginRoute, registerRoute, learnRoute]);
+
+export function createAppRouter(queryClient: QueryClient) {
+  return createRouter({ routeTree, context: { queryClient }, defaultPreload: "intent" });
+}
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: ReturnType<typeof createAppRouter>;
+  }
+}
