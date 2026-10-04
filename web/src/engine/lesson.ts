@@ -385,6 +385,10 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
       return pass(lesson, { ...current, session }, step);
     }
     case "command": {
+      // A step that wants a Ctrl+G expression has to let Ctrl+G open the dialog first.
+      if (event.type === "key" && event.key === "Ctrl+G" && gate.surface === "goto" && !free) {
+        return { ...current, session: performKey(rec, current.session, event.key, event.selected) ?? current.session };
+      }
       if (event.type !== "command" || event.surface !== gate.surface) return current;
       const said = normalizeCommand(event.text);
       if (gate.accept.some((a) => normalizeCommand(a) === said)) {

@@ -2,6 +2,7 @@ import { type CatalogModule, Lesson } from "./schema";
 import type { Recording } from "./machine/types";
 import { tourOfTheInterface } from "./modules/m1/l1-tour-of-the-interface";
 import { controllingExecution } from "./modules/m1/l2-controlling-execution";
+import { breakpoints } from "./modules/m1/l3-breakpoints";
 import { vaultRecordings } from "./specimens/vault";
 
 export * from "./schema";
@@ -24,10 +25,13 @@ export function getRecording(id: string): Recording {
 
 /** Every playable lesson, validated when the module loads so bad content fails fast. */
 export const lessons: Record<string, Lesson> = Object.fromEntries(
-  [tourOfTheInterface, controllingExecution].map((input) => {
+  [tourOfTheInterface, controllingExecution, breakpoints].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];
     for (const id of used) if (!recordings[id]) throw new Error(lesson.id + " uses unknown recording " + id);
+    for (const step of lesson.steps) {
+      if (step.source && !lesson.source.regions[step.source]) throw new Error(lesson.id + " uses unknown source region " + step.source);
+    }
     return [lesson.id, lesson];
   }),
 );

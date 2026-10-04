@@ -39,5 +39,8 @@ export const vaultSource: SourceFile = {
     check_code: [8, 12],
     main: [14, 31],
     "main.puts": [18, 18],
+    "main.check": [24, 24],
+    "main.messagebox": [25, 25],
+    "check_code.increment": [10, 10],
   },
 };

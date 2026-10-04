@@ -19,6 +19,18 @@ export const vault: Readonly<Record<VaultLabel, string>> = (() => {
 })();
 
 /** RSP the first time the run reaches a label, for pointing at stack slots such as a return address. */
+/** Symbol addresses outside the vault code: globals and imported APIs, such as sym.g_attempts or sym.MessageBoxA. */
+export const sym: Readonly<Record<"g_attempts" | "SECRET" | "MessageBoxA" | "MessageBoxW", string>> = (() => {
+  const all = vaultRecordings().wrong.symbols;
+  const find = (name: string) => {
+    const s = all.find((x) => x.name === name);
+    if (!s) throw new Error("vault has no symbol " + name);
+    return s.address;
+  };
+  return { g_attempts: find("g_attempts"), SECRET: find("SECRET"), MessageBoxA: find("MessageBoxA"), MessageBoxW: find("MessageBoxW") };
+})();
+
+/** RSP the first time the run reaches a label, for pointing at stack slots such as a return address. */
 export function rspAt(label: VaultLabel, run: "wrong" | "right" = "wrong"): string {
   const rec = vaultRecordings()[run];
   const state = rec.states.find((s) => s.rip === vault[label]);

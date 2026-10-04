@@ -77,10 +77,13 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
   selectedRef.current = selected;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isTyping(e.target) || e.metaKey || e.altKey) return;
+      if (e.metaKey || e.altKey) return;
+      // Function keys work from anywhere, like x64dbg's global shortcuts; other keys belong to the text box.
+      const fKey = /^F([1-9]|1[0-2])$/.test(e.key);
+      if (isTyping(e.target) && !fKey) return;
       const key = keyName(e);
       if (!key) return;
-      if (/^F([1-9]|1[0-2])$/.test(e.key) || DEBUG_KEYS.has(key)) {
+      if (fKey || DEBUG_KEYS.has(key)) {
         e.preventDefault();
         const ripOffscreen = disasm.current?.ripOffscreen() ?? false;
         dispatch({ type: "key", key, ripOffscreen, selected: selectedRef.current });
