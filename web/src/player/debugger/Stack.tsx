@@ -16,7 +16,7 @@ export function Stack() {
   });
 
   return (
-    <Pane id="stack" label="Stack" className="w-82.5 shrink-0 border-l border-line">
+    <Pane id="stack" label="Stack" className="w-110 shrink-0 border-l border-line">
       <div className="flex h-6 shrink-0 items-center border-b border-line px-2 text-[11px] text-faint">Stack</div>
       <div className="pane-scroll min-h-0 grow overflow-y-auto font-mono text-xs/5">
         {rows.map((row, i) => (
