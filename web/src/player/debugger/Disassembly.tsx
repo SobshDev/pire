@@ -1,10 +1,12 @@
-import type { Instruction, Snapshot } from "@pire/content";
-import { useCallback, useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
+import type { CodeRow } from "@pire/content";
+import { useImperativeHandle, useLayoutEffect, useMemo, useRef, type Ref } from "react";
+import { moduleOf } from "../../engine/debugger";
 import { cx } from "../../ui/bits";
-import { useView } from "../view";
+import { useTarget, useView } from "../view";
 import { Pane } from "./Pane";
 
 const ROW = 22;
+const TOP_OFFSET = 4;
 
 export interface DisassemblyHandle {
   goToRip(): void;
@@ -14,58 +16,80 @@ export interface DisassemblyHandle {
 const FLOW = new Set(["call", "jmp", "ret"]);
 const isFlow = (m: string) => FLOW.has(m) || (m.startsWith("j") && m.length <= 4);
 
-export function Disassembly({ snapshot, ref }: { snapshot: Snapshot; ref: Ref<DisassemblyHandle> }) {
+export function Disassembly({ ref }: { ref: Ref<DisassemblyHandle> }) {
+  const view = useView();
   const scroller = useRef<HTMLDivElement>(null);
-  const ripIndex = snapshot.disassembly.findIndex((r) => r.address === snapshot.rip);
-  const ripTop = Math.max(0, ripIndex - snapshot.disassemblyTopOffset) * ROW;
+  const rip = view.state.rip;
+  const focus = view.session.view ?? rip;
+  const module = moduleOf(view.rec, focus);
+  const rows = useMemo(() => module?.rows ?? [], [module]);
+  const indexOf = (address: string) => rows.findIndex((r) => r.address === address);
 
-  const goToRip = useCallback(() => {
-    scroller.current?.scrollTo({ top: ripTop });
-  }, [ripTop]);
+  const isVisible = (i: number) => {
+    const el = scroller.current;
+    if (!el) return false;
+    const top = i * ROW;
+    return top >= el.scrollTop && top + ROW <= el.scrollTop + el.clientHeight;
+  };
+  const scrollTo = (i: number) => scroller.current?.scrollTo({ top: Math.max(0, i - TOP_OFFSET) * ROW });
 
-  useLayoutEffect(goToRip, [goToRip]);
+  // Keep the focused line on screen, the way x64dbg follows RIP after every step.
+  useLayoutEffect(() => {
+    const i = indexOf(focus);
+    if (i >= 0 && !isVisible(i)) scrollTo(i);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, view.session.index, rows]);
 
   useImperativeHandle(ref, () => ({
-    goToRip,
+    goToRip() {
+      const i = indexOf(rip);
+      if (i >= 0) scrollTo(i);
+    },
     ripOffscreen() {
-      const el = scroller.current;
-      if (!el) return false;
-      const top = ripIndex * ROW;
-      return top + ROW <= el.scrollTop || top >= el.scrollTop + el.clientHeight;
+      const i = indexOf(rip);
+      return i < 0 || !isVisible(i);
     },
   }));
+
+  const bps = new Map(view.session.breakpoints.filter((b) => b.kind === "software").map((b) => [b.address, b]));
 
   return (
     <Pane id="disassembly" label="Disassembly" className="grow">
       <div ref={scroller} className="pane-scroll min-h-0 grow overflow-y-auto font-mono text-xs" data-testid="disasm-scroll">
-        {snapshot.disassembly.map((row) => (
-          <Row key={row.address} row={row} isRip={row.address === snapshot.rip} />
+        {rows.length === 0 && <p className="p-3 text-faint">No code to show at this address.</p>}
+        {rows.map((row) => (
+          <Row key={row.address} row={row} isRip={row.address === rip} bp={bps.get(row.address)?.enabled} />
         ))}
       </div>
     </Pane>
   );
 }
 
-function Row({ row, isRip }: { row: Instruction; isRip: boolean }) {
-  const view = useView();
+function Row({ row, isRip, bp }: { row: CodeRow; isRip: boolean; bp: boolean | undefined }) {
   const id = "disasm:" + row.address;
-  const lit = view.highlights.has(id);
+  const { props, selected } = useTarget(
+    id,
+    "disassembly",
+    cx(
+      "flex h-5.5 items-center whitespace-nowrap",
+      isRip && "bg-rip shadow-[inset_0_0_0_1px_var(--color-amber-dim)]",
+      !isRip && "hover:bg-[#1A1815]",
+    ),
+  );
   return (
-    <div
-      role="button"
-      tabIndex={-1}
-      data-target={id}
-      onClick={() => view.target(id, "disassembly")}
-      className={cx(
-        "flex h-5.5 cursor-default items-center whitespace-nowrap",
-        isRip && "bg-rip shadow-[inset_0_0_0_1px_var(--color-amber-dim)]",
-        !isRip && view.selected === id && "bg-raised",
-        !isRip && "hover:bg-[#1A1815]",
-        lit && "relative z-10 shadow-[inset_0_0_0_1.5px_var(--color-amber)]",
-      )}
-    >
+    <div {...props} className={cx(props.className, !isRip && selected && "bg-raised")}>
       <span className="w-9.5 shrink-0 pl-1.5 text-[10px] font-semibold text-amber">{isRip ? "RIP" : ""}</span>
-      <span className={cx("w-33 shrink-0 px-1", isRip ? "bg-fg text-ink" : "text-muted")}>{row.address}</span>
+      <span
+        className={cx(
+          "w-33 shrink-0 px-1",
+          bp === true && "bg-bad text-white",
+          bp === false && "text-bad",
+          bp === undefined && (isRip ? "bg-fg text-ink" : "text-muted"),
+        )}
+        data-bp={bp === undefined ? undefined : bp ? "on" : "off"}
+      >
+        {row.address}
+      </span>
       <span className="w-32 shrink-0 truncate px-2 text-faint">{row.bytes}</span>
       <span className="w-62 shrink-0 truncate">
         <span className={cx(isFlow(row.mnemonic) ? "text-amber" : row.mnemonic === "int3" ? "text-faint" : "text-mnemonic")}>

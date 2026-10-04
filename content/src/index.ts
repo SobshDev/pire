@@ -1,12 +1,32 @@
 import { type CatalogModule, Lesson } from "./schema";
+import type { Recording } from "./machine/types";
 import { tourOfTheInterface } from "./modules/m1/l1-tour-of-the-interface";
+import { vaultRecordings } from "./specimens/vault";
 
 export * from "./schema";
+export type * from "./machine/types";
+export { FLAG_ORDER, flagsFromRflags, type FlagName } from "./machine/machine";
+
+/** Every recording lessons can use, by id. */
+export const recordings: Record<string, Recording> = Object.fromEntries(
+  (() => {
+    const v = vaultRecordings();
+    return [v.wrong, v.right, v.strippedWrong, v.strippedRight].map((r) => [r.id, r]);
+  })(),
+);
+
+export function getRecording(id: string): Recording {
+  const rec = recordings[id];
+  if (!rec) throw new Error("unknown recording " + id);
+  return rec;
+}
 
 /** Every playable lesson, validated when the module loads so bad content fails fast. */
 export const lessons: Record<string, Lesson> = Object.fromEntries(
   [tourOfTheInterface].map((input) => {
     const lesson = Lesson.parse(input);
+    const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];
+    for (const id of used) if (!recordings[id]) throw new Error(lesson.id + " uses unknown recording " + id);
     return [lesson.id, lesson];
   }),
 );

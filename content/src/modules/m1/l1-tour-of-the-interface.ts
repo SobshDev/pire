@@ -1,7 +1,7 @@
 import type { LessonInput } from "../../schema";
-import { vaultAtMain, vaultSource } from "../../specimens/vault";
+import { vault, vaultSource } from "../../specimens/vault";
 
-const RIP_ROW = "disasm:0000000140001070";
+const RIP_ROW = "disasm:" + vault.main;
 
 /** Lesson 1.1, designed in docs/lessons/01-debugger-basics/01-tour-of-the-interface.md. */
 export const tourOfTheInterface: LessonInput = {
@@ -12,7 +12,8 @@ export const tourOfTheInterface: LessonInput = {
   mission:
     "x64dbg has stopped at the first line of main. Find out where you are, what the CPU holds, and what is on the stack, without running a single instruction.",
   minutes: 10,
-  snapshot: vaultAtMain,
+  recording: "vault.wrong",
+  start: { at: vault.main, dump: "0000000140003200" },
   source: vaultSource,
   locks: { infobox: "1.4", callArgs: "3.1", command: "1.3" },
   steps: [
@@ -49,15 +50,15 @@ export const tourOfTheInterface: LessonInput = {
       source: "main.puts",
       gate: {
         type: "click",
-        accept: ["disasm:000000014000107B"],
+        accept: ["disasm:" + vault["main.puts"]],
         wrong: [
           {
-            match: "disasm:0000000140001074",
+            match: "disasm:" + vault["main.banner"],
             feedback: "Close. This line loads the banner's address into RCX, ready for the call. The call itself is on the next line.",
           },
           { match: RIP_ROW, feedback: "That line is part of main's setup. Look a few lines further down for the word call." },
           {
-            match: "disasm:0000000140001088",
+            match: "disasm:" + vault["main.printf"],
             feedback: "That's a call, but to printf. You want the one that mentions puts.",
           },
         ],
@@ -135,7 +136,7 @@ export const tourOfTheInterface: LessonInput = {
           "dump:ascii:0000000140003240",
         ],
         wrong: [
-          { match: "dump:hex:*", feedback: "That's the hex column. The same bytes as text are on the right." },
+          { match: "dump:byte:*", feedback: "That's the hex column. The same bytes as text are on the right." },
           { match: "dump:ascii:*", feedback: "Those are zero bytes, shown as dots. Pick a row with words in it." },
         ],
         fallback: "Click the text column on the right side of the dump.",

@@ -2,13 +2,13 @@ import { useDraggable } from "@dnd-kit/core";
 import type { Lesson, Step } from "@pire/content";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, type ReactNode } from "react";
-import type { LessonEvent, LessonState } from "../engine/lesson";
+import type { LessonState, PlayerEvent } from "../engine/lesson";
 import { cx, Keycap } from "../ui/bits";
 
 interface GuideProps {
   lesson: Lesson;
   state: LessonState;
-  dispatch(event: LessonEvent): void;
+  dispatch(event: PlayerEvent): void;
   sourceOpen: boolean;
 }
 
@@ -56,9 +56,20 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
             transition={{ duration: 0.18 }}
             className="flex flex-col gap-4"
           >
+            {state.banner && (
+              <p className="self-start rounded-full border border-amber-dim bg-[#1C160C] px-3 py-1 font-mono text-[11px] text-amber" data-testid="banner">
+                {state.banner}
+              </p>
+            )}
             <h2 className="text-lg/6 font-semibold text-fg">{step.title}</h2>
             <p className="text-[15px]/5.75 text-fg">{step.say}</p>
             {step.action && state.phase === "asking" && <ActionRow>{step.action}</ActionRow>}
+            {(step.free || step.gate.type === "goal") && state.phase === "asking" && (
+              <p className="self-start rounded-sm bg-raised px-2 py-1 font-mono text-[10px] tracking-[0.08em] text-muted uppercase">
+                Free play · every key works
+              </p>
+            )}
+            {step.figure && <Figure figure={step.figure} />}
             <GateUI step={step} state={state} dispatch={dispatch} />
             <FeedbackBox state={state} step={step} dispatch={dispatch} />
             {step.hints.length > 0 && state.phase === "asking" && state.hintsShown < step.hints.length && (
@@ -87,6 +98,28 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
   );
 }
 
+const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 1009, 7);
+
+function Figure({ figure }: { figure: NonNullable<Step["figure"]> }) {
+  return (
+    <div className="rounded-md border border-line bg-ink p-3 font-mono text-xs" data-testid="figure">
+      {figure.caption && <p className="mb-2 font-sans text-[11px] text-muted">{figure.caption}</p>}
+      {figure.rows.map((row) => (
+        <div key={row.label} className="flex items-center gap-3 py-0.5">
+          <span className="w-20 shrink-0 font-sans text-[11px] text-muted">{row.label}</span>
+          <span className="flex gap-1.5">
+            {row.bytes.split(" ").map((b, i) => (
+              <span key={i} className={row.highlight.includes(i) ? "rounded-xs bg-amber px-0.5 text-ink" : "px-0.5 text-fg"}>
+                {b}
+              </span>
+            ))}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ActionRow({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-center gap-2.5 rounded-md border border-amber-line bg-[#1C160C] px-3 py-2.5 text-sm text-amber">
@@ -98,7 +131,7 @@ function ActionRow({ children }: { children: ReactNode }) {
   );
 }
 
-function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dispatch(e: LessonEvent): void }) {
+function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dispatch(e: PlayerEvent): void }) {
   const gate = step.gate;
   const answered = state.phase === "success";
   switch (gate.type) {
@@ -137,6 +170,73 @@ function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dis
       );
     case "predict":
       return answered ? null : <PredictInput key={state.stepIndex} placeholder={gate.placeholder} dispatch={dispatch} />;
+    case "quiz": {
+      const q = gate.questions[state.answered];
+      return (
+        <div className="flex flex-col gap-3">
+          {gate.questions.slice(0, state.answered).map((done) => (
+            <p key={done.prompt} className="flex gap-2 text-[13px]/5 text-muted">
+              <span className="text-ok">✓</span>
+              <span>
+                {done.prompt + " "}
+                <span className="text-fg">{done.options.find((o) => o.id === done.correct)?.label}</span>
+              </span>
+            </p>
+          ))}
+          {q && !answered && (
+            <>
+              <p className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">
+                {"Question " + (state.answered + 1) + " of " + gate.questions.length}
+              </p>
+              <p className="text-sm/5.5 text-fg" data-testid="quiz-prompt">{q.prompt}</p>
+              <div className="flex flex-col gap-2">
+                {q.options.map((o, i) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => dispatch({ type: "choose", id: o.id })}
+                    className={cx(
+                      "flex items-start gap-3 rounded-md border px-3 py-2 text-left text-sm/5 text-fg transition-colors",
+                      state.chosen === o.id && state.feedback?.tone === "wrong" ? "border-bad bg-bad-bg" : "border-line bg-ink hover:border-amber-dim",
+                    )}
+                  >
+                    <span className="font-mono text-xs/5 text-amber">{String.fromCharCode(65 + i)}</span>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+    case "order": {
+      const shuffled = [...gate.items].sort((a, b) => hash(a) - hash(b));
+      return (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-muted">Click them in order, first to last.</p>
+          {shuffled.map((label) => {
+            const n = state.ordered.indexOf(label);
+            const picked = n >= 0 || answered;
+            return (
+              <button
+                key={label}
+                type="button"
+                disabled={picked}
+                onClick={() => dispatch({ type: "order", label })}
+                className={cx(
+                  "flex h-9 items-center gap-3 rounded-[18px] border px-4 text-left text-[13px]",
+                  picked ? "border-ok bg-ok-bg text-fg" : "border-amber-dim bg-[#1C160C] text-fg hover:border-amber",
+                )}
+              >
+                <span className="w-4 font-mono text-[11px] text-ok">{picked ? String((n >= 0 ? n : gate.items.indexOf(label)) + 1) : ""}</span>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
     case "match":
       return (
         <div className="flex flex-col gap-2">
@@ -153,7 +253,7 @@ function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dis
 const primary =
   "flex h-9 items-center justify-center gap-2 self-start rounded-md bg-amber px-4 text-sm font-medium text-ink hover:brightness-110";
 
-function PredictInput({ placeholder, dispatch }: { placeholder: string; dispatch(e: LessonEvent): void }) {
+function PredictInput({ placeholder, dispatch }: { placeholder: string; dispatch(e: PlayerEvent): void }) {
   const [value, setValue] = useState("");
   return (
     <form
@@ -207,7 +307,7 @@ function Chip({ label, placed }: { label: string; placed: boolean }) {
   );
 }
 
-function FeedbackBox({ state, step, dispatch }: { state: LessonState; step: Step; dispatch(e: LessonEvent): void }) {
+function FeedbackBox({ state, step, dispatch }: { state: LessonState; step: Step; dispatch(e: PlayerEvent): void }) {
   if (state.phase === "success") {
     return (
       <Box tone="ok" title="Correct">
