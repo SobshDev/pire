@@ -1,0 +1,38 @@
+[package]
+name = "pire-api"
+version = "0.1.0"
+edition = "2024"
+default-run = "pire-api"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pire-api"
+path = "src/main.rs"
+
+[[bin]]
+name = "openapi"
+path = "src/bin/openapi.rs"
+
+[dependencies]
+argon2 = "0.6.0"
+axum = { version = "0.8", features = ["macros"] }
+dotenvy = "0.15.7"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "time", "json", "migrate", "macros"] }
+thiserror = "2.0.21"
+time = { version = "0.3.55", features = ["serde", "serde-well-known"] }
+tokio = { version = "1.53.2", features = ["full"] }
+tower-http = { version = "0.7.1", features = ["fs", "trace", "compression-gzip"] }
+tower-sessions = "0.14"
+tower-sessions-sqlx-store = { version = "0.15.0", features = ["postgres"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+utoipa = { version = "6.0.0", features = ["axum_extras", "uuid", "time"] }
+uuid = { version = "1.27.0", features = ["v4", "serde"] }
+
+[dev-dependencies]
+http-body-util = "0.1.5"
+tower = "0.5.3"
