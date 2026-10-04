@@ -49,7 +49,15 @@ export type Setup = z.infer<typeof Setup>;
 
 /** What the learner must make true in the debugger during a free step. */
 export const Check = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("pausedAt"), address: hex, recording: z.string().optional() }),
+  z.object({
+    kind: z.literal("pausedAt"),
+    address: hex,
+    /** Other addresses that also count, such as the call site of the function asked for. */
+    or: z.array(hex).default([]),
+    /** Only counts when an enabled software breakpoint is set on the address. */
+    withBreakpoint: z.boolean().default(false),
+    recording: z.string().optional(),
+  }),
   z.object({ kind: z.literal("dumpShows"), text: z.string() }),
   z.object({ kind: z.literal("hwHit"), address: hex }),
   z.object({ kind: z.literal("breakpointAt"), address: hex }),
@@ -199,8 +207,12 @@ export const Lesson = z.object({
   }),
   /** Show the program's console window. */
   console: z.boolean().default(false),
-  /** A short outline of the goals for challenge lessons, shown on the completion screen. */
+  /** Challenge lessons: no guided text, a goal list, a shared pool of hint tokens, and a medal. */
   challenge: z.boolean().default(false),
+  /** Hint tokens for the whole challenge. Each one reveals the next hint for the current goal. */
+  hintTokens: z.number().int().nonnegative().default(3),
+  /** Notes on the completion screen of a challenge, shown with the source. */
+  debrief: z.array(z.string()).default([]),
   steps: z.array(Step).min(1),
   tryIt: z.array(z.string()),
 });

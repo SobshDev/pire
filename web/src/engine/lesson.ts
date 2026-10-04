@@ -22,6 +22,8 @@ export interface LessonState {
   feedback: Feedback | null;
   mistakes: number;
   hintsShown: number;
+  /** Hints used across the whole lesson. Challenges have a fixed pool of them. */
+  hintsUsed: number;
   /** Match checkpoint: label to pane, for labels placed correctly. */
   placed: Record<string, string>;
   /** Choose gate: the option the learner picked last. */
@@ -63,6 +65,7 @@ export interface Resume {
   stepIndex: number;
   keys?: string[];
   mistakes?: number;
+  hintsUsed?: number;
   session?: Session;
 }
 
@@ -126,6 +129,7 @@ export function initialState(lesson: Lesson, resume?: Resume): PlayerState {
       feedback: null,
       mistakes: resume?.mistakes ?? 0,
       hintsShown: 0,
+      hintsUsed: resume?.hintsUsed ?? 0,
       placed: {},
       chosen: null,
       ordered: [],
@@ -246,11 +250,23 @@ export function performMenu(rec: Recording, s: Session, target: string, item: st
   }
 }
 
+export type Medal = "gold" | "silver" | "bronze";
+
+/** A challenge's medal: gold without hints, silver with one or two, bronze with more. */
+export function medal(hintsUsed: number): Medal {
+  return hintsUsed === 0 ? "gold" : hintsUsed <= 2 ? "silver" : "bronze";
+}
+
 export function checkGoal(rec: Recording, s: Session, check: Check): boolean {
   const st = D.stateOf(rec, s);
   switch (check.kind) {
     case "pausedAt":
-      return !st.terminated && st.rip === check.address && (!check.recording || s.recording === check.recording);
+      return (
+        !st.terminated &&
+        [check.address, ...check.or].includes(st.rip) &&
+        (!check.recording || s.recording === check.recording) &&
+        (!check.withBreakpoint || s.breakpoints.some((b) => b.enabled && b.kind === "software" && b.address === check.address))
+      );
     case "breakpointAt":
       return s.breakpoints.some((b) => b.enabled && b.kind === "software" && b.address === check.address);
     case "hwHit":
@@ -333,8 +349,9 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
 
   if (event.type === "hint") {
     if (l.hintsShown >= step.hints.length) return state;
+    if (lesson.challenge && l.hintsUsed >= lesson.hintTokens) return state;
     const hintsShown = l.hintsShown + 1;
-    return withLesson(state, { hintsShown, feedback: { tone: "hint", text: step.hints[hintsShown - 1] ?? "" } });
+    return withLesson(state, { hintsShown, hintsUsed: l.hintsUsed + 1, feedback: { tone: "hint", text: step.hints[hintsShown - 1] ?? "" } });
   }
 
   // Double-clicking a reference or breakpoint row jumps to its code, like in x64dbg.

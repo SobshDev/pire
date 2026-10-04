@@ -71,7 +71,8 @@ function References() {
       </p>
     );
   }
-  const module = moduleOf(view.rec, view.state.rip)?.name === "vault.exe" ? "vault.exe" : "vault.exe";
+  // String references are searched in the program's own module, the first one in the recording.
+  const module = view.rec.modules[0]?.name;
   const strings = view.rec.strings.filter((s) => moduleOf(view.rec, s.address)?.name === module);
   return (
     <div className="flex min-h-0 grow flex-col">

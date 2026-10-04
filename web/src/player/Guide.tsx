@@ -13,6 +13,7 @@ interface GuideProps {
 }
 
 export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
+  if (lesson.challenge) return <ChallengeGuide lesson={lesson} state={state} dispatch={dispatch} />;
   const step = lesson.steps[state.stepIndex];
   if (!step) return <aside className="w-85 shrink-0 border-l border-amber-line bg-guide" />;
 
@@ -99,6 +100,89 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
 }
 
 const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 1009, 7);
+
+/** Challenges: the goal list, the current goal's answer box, and a shared pool of hint tokens. */
+function ChallengeGuide({ lesson, state, dispatch }: Omit<GuideProps, "sourceOpen">) {
+  const step = lesson.steps[state.stepIndex];
+  const tokensLeft = lesson.hintTokens - state.hintsUsed;
+  const revealed = step ? step.hints.slice(0, state.hintsShown) : [];
+  return (
+    <aside className="flex w-85 shrink-0 flex-col border-l border-amber-line bg-guide" aria-label="Guide">
+      <div className="shrink-0 px-5 pt-4">
+        <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.12em] uppercase">
+          <span className="text-amber" data-testid="guide-kicker">Challenge · no guide</span>
+          <span className="text-muted">{Math.min(state.stepIndex + 1, lesson.steps.length) + " / " + lesson.steps.length}</span>
+        </div>
+        <p className="mt-3 text-sm/5.5 text-muted">{lesson.mission}</p>
+      </div>
+
+      <div className="pane-scroll min-h-0 grow overflow-y-auto px-5 pt-4 pb-6">
+        {state.banner && (
+          <p className="mb-3 inline-block rounded-full border border-amber-dim bg-[#1C160C] px-3 py-1 font-mono text-[11px] text-amber" data-testid="banner">
+            {state.banner}
+          </p>
+        )}
+        <ol className="flex flex-col gap-1.5" aria-label="Goals">
+          {lesson.steps.map((s, i) => {
+            const done = i < state.stepIndex || (i === state.stepIndex && state.phase === "success");
+            const current = i === state.stepIndex;
+            return (
+              <li
+                key={i}
+                data-testid={"goal-" + (i + 1)}
+                className={cx(
+                  "rounded-md border px-3 py-2.5",
+                  current ? "border-amber-dim bg-[#1C160C]" : "border-transparent",
+                  !current && !done && "opacity-45",
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className={cx(
+                      "flex size-4.5 shrink-0 items-center justify-center rounded-full border font-mono text-[10px]",
+                      done ? "border-ok bg-ok text-ink" : current ? "border-amber text-amber" : "border-line text-faint",
+                    )}
+                  >
+                    {done ? "✓" : i + 1}
+                  </span>
+                  <span className={cx("text-sm", done ? "text-muted" : "text-fg")}>{s.title}</span>
+                </div>
+                {current && (
+                  <div className="mt-2.5 flex flex-col gap-3 pl-7">
+                    <p className="text-[14px]/5.5 text-fg">{s.say}</p>
+                    <GateUI step={s} state={state} dispatch={dispatch} />
+                    {/* Hints show in the list below, so the feedback box only carries answers and nudges. */}
+                    {(state.phase === "success" || state.feedback?.tone !== "hint") && <FeedbackBox state={state} step={s} dispatch={dispatch} />}
+                    {revealed.map((h, n) => (
+                      <Box key={h} tone="hint" title={["Nudge", "Pointer", "Answer"][n] ?? "Hint"}>
+                        {h}
+                      </Box>
+                    ))}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-3 border-t border-amber-line px-5 py-3">
+        <span className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Hint tokens</span>
+        <span className="flex gap-1" aria-label={tokensLeft + " hint tokens left"}>
+          {Array.from({ length: lesson.hintTokens }, (_, i) => (
+            <span key={i} className={cx("size-2.5 rounded-full", i < tokensLeft ? "bg-amber" : "bg-line")} />
+          ))}
+        </span>
+        <span className="grow" />
+        {step && state.phase === "asking" && tokensLeft > 0 && state.hintsShown < step.hints.length && (
+          <button type="button" onClick={() => dispatch({ type: "hint" })} className="text-xs text-muted underline decoration-faint underline-offset-4 hover:text-amber">
+            Spend one
+          </button>
+        )}
+      </div>
+    </aside>
+  );
+}
 
 function Figure({ figure }: { figure: NonNullable<Step["figure"]> }) {
   return (
@@ -355,7 +439,7 @@ function Box({ tone, title, children }: { tone: "ok" | "wrong" | "hint" | "info"
   );
 }
 
-function SourceCard({ lesson, region }: { lesson: Lesson; region: string }) {
+export function SourceCard({ lesson, region }: { lesson: Lesson; region: string }) {
   const lines = lesson.source.code.split("\n");
   const range = lesson.source.regions[region];
   const [from, to] = range ?? [1, lines.length];

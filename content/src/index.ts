@@ -5,7 +5,9 @@ import { controllingExecution } from "./modules/m1/l2-controlling-execution";
 import { breakpoints } from "./modules/m1/l3-breakpoints";
 import { followingValues } from "./modules/m1/l4-following-values";
 import { gettingToMain } from "./modules/m1/l5-getting-to-main";
+import { theVault } from "./modules/m1/challenge-the-vault";
 import { vaultRecordings } from "./specimens/vault";
+import { vault2Recordings } from "./specimens/vault2";
 
 export * from "./schema";
 export type * from "./machine/types";
@@ -14,8 +16,7 @@ export { FLAG_ORDER, flagsFromRflags, type FlagName } from "./machine/machine";
 /** Every recording lessons can use, by id. */
 export const recordings: Record<string, Recording> = Object.fromEntries(
   (() => {
-    const v = vaultRecordings();
-    return [v.wrong, v.right, v.strippedWrong, v.strippedRight].map((r) => [r.id, r]);
+    return [vaultRecordings(), vault2Recordings()].flatMap((v) => [v.wrong, v.right, v.strippedWrong, v.strippedRight].map((r) => [r.id, r]));
   })(),
 );
 
@@ -27,7 +28,7 @@ export function getRecording(id: string): Recording {
 
 /** Every playable lesson, validated when the module loads so bad content fails fast. */
 export const lessons: Record<string, Lesson> = Object.fromEntries(
-  [tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain].map((input) => {
+  [tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain, theVault].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];
     for (const id of used) if (!recordings[id]) throw new Error(lesson.id + " uses unknown recording " + id);

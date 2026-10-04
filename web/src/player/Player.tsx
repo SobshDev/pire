@@ -62,7 +62,13 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
     save.mutate({
       beat_index: s.lesson.stepIndex,
       completed: s.lesson.done,
-      state: { mistakes: s.lesson.mistakes, keys: s.lesson.keys, session: { ...s.session, log: s.session.log.slice(-50) } },
+      // hintsUsed decides a challenge's medal, so it has to survive a reload.
+      state: {
+        mistakes: s.lesson.mistakes,
+        keys: s.lesson.keys,
+        hintsUsed: s.lesson.hintsUsed,
+        session: { ...s.session, log: s.session.log.slice(-50) },
+      },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ls.stepIndex, ls.done]);
@@ -94,7 +100,7 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
       if (key === "Enter" && !(e.target instanceof HTMLButtonElement)) {
         e.preventDefault();
         dispatch({ type: "continue" });
-      } else if (key === "S") {
+      } else if (key === "S" && !lesson.challenge) {
         setSourceOpen((o) => !o);
       } else if (key === "?") {
         setHelpOpen((o) => !o);
@@ -176,14 +182,18 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
               <span className="font-mono text-xs text-amber">{lesson.number}</span>
               <span className="text-sm font-medium text-fg">{lesson.title}</span>
               <span className="grow" />
-              <button
-                type="button"
-                onClick={() => setSourceOpen((o) => !o)}
-                aria-pressed={sourceOpen}
-                className="flex h-7 items-center gap-1.5 rounded-md border border-amber-line px-2.5 text-xs text-fg hover:border-amber-dim aria-pressed:border-amber-dim"
-              >
-                Source <Keycap small>S</Keycap>
-              </button>
+              {lesson.challenge ? (
+                <span className="text-xs text-faint">Source unlocks when you finish</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSourceOpen((o) => !o)}
+                  aria-pressed={sourceOpen}
+                  className="flex h-7 items-center gap-1.5 rounded-md border border-amber-line px-2.5 text-xs text-fg hover:border-amber-dim aria-pressed:border-amber-dim"
+                >
+                  Source <Keycap small>S</Keycap>
+                </button>
+              )}
               <div className="relative">
                 <button
                   type="button"
