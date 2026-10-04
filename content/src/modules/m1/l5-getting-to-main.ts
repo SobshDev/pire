@@ -1,0 +1,247 @@
+import type { LessonInput } from "../../schema";
+import { rowsMentioning, vault, vaultSource } from "../../specimens/vault";
+
+const REC = "vault-stripped.wrong";
+const row = (label: keyof typeof vault) => "disasm:" + vault[label];
+const importCall = (name: string) =>
+  rowsMentioning("<&" + name + ">").map((address) => ({
+    match: "disasm:" + address,
+    feedback: "That call has a name, " + name + ", so it's a DLL function. main is ours, so it shows only as an address.",
+  }));
+
+/** Lesson 1.5, designed in docs/lessons/01-debugger-basics/05-getting-to-main.md. */
+export const gettingToMain: LessonInput = {
+  id: "m1.l5",
+  module: 1,
+  number: "1.5",
+  title: "Getting to main",
+  mission:
+    "This time there are no names. x64dbg stops before your code, and main is somewhere in thousands of instructions. Find it two different ways.",
+  minutes: 12,
+  recording: REC,
+  start: { at: "start", dump: "0000000140003200" },
+  source: vaultSource,
+  locks: { callArgs: "3.1" },
+  console: true,
+  steps: [
+    {
+      section: "beat",
+      kind: "Key",
+      title: "The first stop",
+      say: "This is vault.exe freshly loaded. Before your program runs a single line, Windows has to set it up, and x64dbg pauses at the first chance it gets, inside ntdll.dll. That's not your code. Press F9.",
+      action: "Press F9",
+      pulse: ["status:paused"],
+      gate: { type: "key", key: "F9" },
+      success:
+        "Next stop: the status bar says entry breakpoint, and the window title says vault.exe. This is the program's entry point. It's in vault.exe, but it still isn't main.",
+    },
+    {
+      section: "beat",
+      kind: "Choose",
+      title: "Where are the names?",
+      say: "Last time x64dbg showed names like main and check_code. Look at this listing: the call and the jmp show bare addresses like vault.00000001400011A0. Why?",
+      spotlight: "disassembly",
+      gate: {
+        type: "choose",
+        correct: "pdb",
+        options: [
+          { id: "pdb", label: "This build has no symbols (no PDB file)." },
+          { id: "packed", label: "The program is encrypted.", feedback: "The instructions decode fine. Only the names are missing." },
+          { id: "dll", label: "This code is inside a DLL.", feedback: "The title bar says vault.exe. The code is the program's own." },
+        ],
+      },
+      success:
+        "Names like main come from a PDB file the compiler writes next to the program. Real targets almost never ship one, so from now on you'll often see only addresses.",
+    },
+    {
+      section: "beat",
+      kind: "Menu",
+      title: "Route A: start from a string",
+      say: "Here's the quick route. The program prints Enter code:, so the code that prints it must mention that string. Right-click the disassembly and choose Search for, Current Module, String references.",
+      action: "Right-click the disassembly",
+      gate: {
+        type: "menu",
+        target: "disasm:*",
+        item: "search-strings",
+        fallback: "Right-click any line, then Search for, Current Module, String references.",
+      },
+      success: "The References tab lists every string the code uses, with the instruction that uses it.",
+    },
+    {
+      section: "beat",
+      kind: "Click",
+      title: "Jump to the code",
+      say: "Double-click the Enter code: row. You'll land on the instruction that uses it.",
+      action: "Double-click Enter code:",
+      pulse: ["ref:" + vault["main.prompt"]],
+      gate: {
+        type: "click",
+        double: true,
+        accept: ["ref:" + vault["main.prompt"]],
+        wrong: [{ match: "ref:*", feedback: "That string works too, but let's follow Enter code: this time." }],
+        fallback: "Double-click the row whose string is Enter code:.",
+      },
+      success: "Back in the CPU tab, on the lea that loads the string. This line is inside main.",
+    },
+    {
+      section: "beat",
+      kind: "Click",
+      title: "Find the top",
+      say: "MSVC separates functions with runs of int3 padding. The first real instruction after the padding is where the function starts. Click it.",
+      action: "Click the first line of the function",
+      spotlight: "disassembly",
+      gate: {
+        type: "click",
+        accept: [row("main")],
+        wrong: [
+          { match: "disasm:000000014000106*", feedback: "That's int3 padding between functions. Look just below it." },
+          { match: "disasm:*", feedback: "Look higher: find the int3 lines, then take the first line after them." },
+        ],
+        fallback: "Click a line in the disassembly.",
+      },
+      success: "sub rsp,58 right after the padding. This is main.",
+    },
+    {
+      section: "beat",
+      kind: "Key",
+      title: "Mark it",
+      say: "Press F2 to put a breakpoint on main.",
+      action: "Press F2",
+      gate: { type: "key", key: "F2", requires: "selection", target: row("main"), notReady: "Click main's first line, sub rsp,58, then press F2." },
+    },
+    {
+      section: "beat",
+      kind: "Key",
+      title: "Run to it",
+      say: "Now F9.",
+      action: "Press F9",
+      gate: { type: "key", key: "F9" },
+      success: "Paused at main, found without a single name. Route A done.",
+    },
+    {
+      section: "beat",
+      kind: "Key",
+      title: "Restart",
+      say: "Press Ctrl+F2 to restart the program and try the other route. Breakpoints stay set.",
+      action: "Press Ctrl+F2",
+      gate: { type: "key", key: "Ctrl+F2" },
+      success: "Restarted. The system breakpoint is back, as always.",
+      unlockKey: "Ctrl+F2",
+    },
+    {
+      section: "beat",
+      kind: "Goal",
+      title: "Route B: the startup code",
+      say: "Route A needs a useful string, and sometimes there isn't one. Route B always works for MSVC programs. The entry point calls a setup function, then jumps to the real startup routine. Get to the jmp and press F7 on it.",
+      action: "Step to the jmp, then F7",
+      setup: { at: vault.mainCRTStartup, banner: "We skipped the system breakpoint for you" },
+      pulse: [row("entry.jmp")],
+      gate: { type: "goal", check: { kind: "pausedAt", address: vault.__scrt_common_main_seh, recording: REC } },
+      hints: ["F8 three times gets you to the jmp. F4 on it works too.", "On the jmp, press F7."],
+      success:
+        "This is the C runtime's startup routine. Its real name is __scrt_common_main_seh. It's long in real programs, but you only need one call in it.",
+    },
+    {
+      section: "beat",
+      kind: "Click",
+      title: "Imports as landmarks",
+      say: "Calls into DLLs keep their names even without a PDB, because the program imports them by name. main needs argc, argv and the environment. Find the calls that fetch them; the call right after them is main. Click it (scroll down if you need to).",
+      action: "Click the call to main",
+      gate: {
+        type: "click",
+        accept: [row("scrt.callmain")],
+        wrong: [
+          ...importCall("__p___argc"),
+          ...importCall("__p___argv"),
+          ...importCall("_get_initial_narrow_environment"),
+          ...importCall("_initterm"),
+          ...importCall("exit"),
+          { match: "disasm:*", feedback: "Look for a call with no name, right after the call to __p___argc." },
+        ],
+        fallback: "Click a line in the disassembly.",
+      },
+      hints: ["main is your code, so it has no import name.", "main needs argc. Look right after the call that fetches it."],
+      success:
+        "That's main. The startup code fetched the environment, argv and argc, put them in R8, RDX and ECX, and calls main(argc, argv, envp).",
+    },
+    {
+      section: "beat",
+      kind: "Key",
+      title: "Run to the call",
+      say: "Press F4 to run to that call.",
+      action: "Press F4",
+      gate: { type: "key", key: "F4", requires: "selection", target: row("scrt.callmain"), notReady: "Click the call to main first, then F4." },
+    },
+    {
+      section: "beat",
+      kind: "Key",
+      title: "Step in",
+      say: "Now F7 to step into it.",
+      action: "Press F7",
+      gate: { type: "key", key: "F7" },
+      success: "RIP is 140001070, the same address Route A found. Both routes lead to the same place. You'll see this address again in Module 2.",
+      successHighlights: ["reg:RIP"],
+    },
+    {
+      section: "beat",
+      kind: "Reveal",
+      title: "One more landmark",
+      say: "To double-check you found the right call: right after main returns, the startup code saves EAX, main's return value, and soon passes it to exit. That's return 1 becoming the program's exit code.",
+      setup: { view: vault["scrt.callmain"] },
+      pulse: [row("scrt.aftermain"), row("scrt.exit")],
+      gate: { type: "continue" },
+    },
+    {
+      section: "checkpoint",
+      kind: "Order",
+      title: "In order",
+      say: "Put these in the order the program passes through them.",
+      gate: {
+        type: "order",
+        items: ["System breakpoint (ntdll.dll)", "Entry point (vault.exe)", "Startup routine", "main"],
+        fallback: "Not that one yet. Start from the very first stop.",
+      },
+      success: "Windows setup, entry point, startup routine, main.",
+    },
+    {
+      section: "checkpoint",
+      kind: "Choose",
+      title: "Choose the route",
+      say: "A program prints nothing and has no interesting strings. How do you find main?",
+      gate: {
+        type: "choose",
+        correct: "b",
+        options: [
+          { id: "a", label: "Route A: search for string references.", feedback: "With no useful strings, there's nothing to search for." },
+          { id: "b", label: "Route B: walk the startup code to the call after __p___argc." },
+          { id: "entry", label: "The entry point is main.", feedback: "The entry point is the C runtime's code. main comes later." },
+        ],
+      },
+      success: "Route B always works for MSVC programs.",
+    },
+    {
+      section: "checkpoint",
+      kind: "Choose",
+      title: "Spot main",
+      say: "Another program's startup code. Which call is main?",
+      gate: {
+        type: "choose",
+        correct: "main",
+        options: [
+          { id: "env", label: "call qword ptr ds:[<&_get_initial_narrow_environment>]", feedback: "That one has an import name. main is your code." },
+          { id: "argv", label: "call qword ptr ds:[<&__p___argv>]", feedback: "That one has an import name. main is your code." },
+          { id: "argc", label: "call qword ptr ds:[<&__p___argc>]", feedback: "This fetches argc. main comes right after." },
+          { id: "main", label: "call app.140001350" },
+        ],
+      },
+      hints: ["main is your code, so it has no import name.", "main needs argc. Look right after the call that fetches it."],
+      success: "The unnamed call right after __p___argc. Same landmark, any MSVC program.",
+    },
+  ],
+  tryIt: [
+    "Load the stripped vault.exe. Note both automatic stops.",
+    "Find main with string references, set a breakpoint, and confirm.",
+    "Restart and find main through the startup code. Check the two addresses match.",
+    "Bonus: open a small console program you built in Release mode without its PDB, and find its main the same way.",
+  ],
+};

@@ -82,7 +82,13 @@ export function applySetup(session: Session | null, setup: Setup | undefined, fa
   const rec = getRecording(recId);
   let s: Session =
     !session || setup?.recording || setup?.at !== undefined
-      ? { ...D.newSession(rec, indexOfAddress(rec, setup?.at)), breakpoints: session?.breakpoints ?? [], log: session?.log ?? [] }
+      ? {
+          ...D.newSession(rec, indexOfAddress(rec, setup?.at)),
+          breakpoints: session?.breakpoints ?? [],
+          log: session?.log ?? [],
+          // A new run keeps the dump where the learner left it, like restarting in x64dbg.
+          ...(session ? { dump: session.dump } : {}),
+        }
       : session;
   if (setup?.breakpoints) s = { ...s, breakpoints: setup.breakpoints.map((b) => ({ ...b })) };
   if (setup?.dump) s = { ...s, dump: setup.dump };
