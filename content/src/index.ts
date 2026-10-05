@@ -10,6 +10,8 @@ import { peLayout } from "./modules/m2/l1-pe-layout";
 import { threeKindsOfAddress } from "./modules/m2/l2-three-kinds-of-address";
 import { importsAndExports } from "./modules/m2/l3-imports-and-exports";
 import { doubleClickToMain } from "./modules/m2/l4-double-click-to-main";
+import { usingAPeViewer } from "./modules/m2/l5-using-a-pe-viewer";
+import { passportControl } from "./modules/m2/challenge-passport-control";
 import { vaultRecordings } from "./specimens/vault";
 import { vault2Recordings } from "./specimens/vault2";
 import { peFileFor } from "./specimens/msvc";
@@ -50,7 +52,7 @@ export function getFile(id: string): PeFile {
 export const lessons: Record<string, Lesson> = Object.fromEntries(
   [
     tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain, theVault,
-    peLayout, threeKindsOfAddress, importsAndExports, doubleClickToMain,
+    peLayout, threeKindsOfAddress, importsAndExports, doubleClickToMain, usingAPeViewer, passportControl,
   ].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];

@@ -64,7 +64,7 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
               </p>
             )}
             <h2 className="text-lg/6 font-semibold text-fg">{step.title}</h2>
-            <p className="text-[15px]/5.75 text-fg">{step.say}</p>
+            <p className="text-[15px]/5.75 whitespace-pre-line text-fg">{step.say}</p>
             {step.action && state.phase === "asking" && <ActionRow>{step.action}</ActionRow>}
             {(step.free || step.gate.type === "goal") && state.phase === "asking" && (
               <p className="self-start rounded-sm bg-raised px-2 py-1 font-mono text-[10px] tracking-[0.08em] text-muted uppercase">
@@ -151,7 +151,7 @@ function ChallengeGuide({ lesson, state, dispatch }: Omit<GuideProps, "sourceOpe
                 </div>
                 {current && (
                   <div className="mt-2.5 flex flex-col gap-3 pl-7">
-                    <p className="text-[14px]/5.5 text-fg">{s.say}</p>
+                    <p className="text-[14px]/5.5 whitespace-pre-line text-fg">{s.say}</p>
                     <GateUI step={s} state={state} dispatch={dispatch} />
                     {/* Hints show in the list below, so the feedback box only carries answers and nudges. */}
                     {(state.phase === "success" || state.feedback?.tone !== "hint") && <FeedbackBox state={state} step={s} dispatch={dispatch} />}
@@ -362,12 +362,12 @@ function FillCard({ gate, state, dispatch }: { gate: Extract<Step["gate"], { typ
         const bad = state.unfilled.includes(f.id);
         const value = done ? (state.filled[f.id] ?? values[f.id] ?? f.answer) : (values[f.id] ?? "");
         const cls = cx(
-          "h-8 min-w-0 grow rounded-sm border bg-panel px-2 font-mono text-[12px] text-fg outline-none focus:border-amber-dim disabled:opacity-90",
+          "h-8 min-w-36 flex-[2] rounded-sm border bg-panel px-2 font-mono text-[12px] text-fg outline-none focus:border-amber-dim disabled:opacity-90",
           done ? "border-ok" : bad ? "border-bad" : "border-line",
         );
         return (
-          <label key={f.id} className="flex items-center gap-2 text-[13px]">
-            <span className="w-32 shrink-0 text-muted">{f.label}</span>
+          <label key={f.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
+            <span className="min-w-28 flex-1 text-muted">{f.label}</span>
             {f.format === "choice" ? (
               <select aria-label={f.label} disabled={done} value={value} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))} className={cls}>
                 <option value="">Choose</option>
