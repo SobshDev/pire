@@ -6,7 +6,6 @@ import {
   Link,
   notFound,
   Outlet,
-  redirect,
 } from "@tanstack/react-router";
 import { getLesson } from "@pire/content";
 import { meQuery, progressQuery } from "./api/queries";
@@ -64,13 +63,10 @@ const registerRoute = createRoute({
 const learnRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/learn/$lessonId",
-  beforeLoad: async ({ context, location }) => {
-    const me = await context.queryClient.ensureQueryData(meQuery);
-    if (!me) throw redirect({ to: "/register", search: { redirect: location.href } });
-  },
+  // No account needed: guests play and their progress stays in this browser until they sign up.
   loader: async ({ context, params }) => {
     if (!getLesson(params.lessonId)) throw notFound();
-    await context.queryClient.ensureQueryData(progressQuery);
+    await Promise.all([context.queryClient.ensureQueryData(meQuery), context.queryClient.ensureQueryData(progressQuery)]);
   },
   component: LearnPage,
 });

@@ -23,17 +23,8 @@ async function drag(page: Page, label: string, pane: string) {
   await page.mouse.up();
 }
 
-test("a new learner signs up and finishes lesson 1.1", async ({ page }) => {
+test("a guest finishes lesson 1.1 without an account, then keeps it by signing up", async ({ page }) => {
   await page.goto("/learn/m1.l1");
-  await expect(page).toHaveURL(/\/register/);
-
-  const email = "e2e-" + Date.now() + "@pire.test";
-  await page.getByLabel("Display name").fill("Ada");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill("correct horse battery");
-  await page.getByLabel("Confirm password").fill("correct horse battery");
-  await page.getByRole("button", { name: "Create account" }).click();
-
   await expect(page).toHaveURL(/\/learn\/m1\.l1/);
   await expect(guide(page)).toContainText("Everything at once");
   await shot(page, "01-overview");
@@ -101,9 +92,20 @@ test("a new learner signs up and finishes lesson 1.1", async ({ page }) => {
   await expect(done).toContainText("Try it on your own machine");
   await shot(page, "06-complete");
 
-  // Progress was saved: the catalog shows the lesson as completed.
+  // Progress was saved in the browser: the catalog shows the lesson as completed.
   await done.getByRole("link", { name: "Back to the course" }).click();
   await expect(page.getByRole("link", { name: /Tour of the interface/ })).toContainText("Completed");
+
+  // Signing up brings the guest's progress into the new account.
+  await page.getByRole("link", { name: "Create account" }).first().click();
+  await page.getByLabel("Display name").fill("Ada");
+  await page.getByLabel("Email").fill("e2e-guest-" + Date.now() + "@pire.test");
+  await page.getByLabel("Password", { exact: true }).fill("correct horse battery");
+  await page.getByLabel("Confirm password").fill("correct horse battery");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("link", { name: /Tour of the interface/ })).toContainText("Completed");
+  expect(await page.evaluate(() => localStorage.getItem("pire.guest-progress"))).toBeNull();
 });
 
 test("progress resumes after a reload", async ({ page }) => {

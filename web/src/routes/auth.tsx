@@ -89,7 +89,7 @@ export function RegisterPage() {
   const { redirect } = useSearch({ strict: false }) as { redirect?: string };
   const [mismatch, setMismatch] = useState(false);
   return (
-    <AuthShell title="Create your account" subtitle="Your progress saves after every step.">
+    <AuthShell title="Create your account" subtitle="Keep your progress, and anything you've played here, on any device.">
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {
