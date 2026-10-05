@@ -16,5 +16,7 @@
     "resolveJsonModule": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "e2e", "vite.config.ts", "playwright.config.ts"]
+  "include": ["src", "e2e", "vite.config.ts", "playwright.config.ts"],
+  // A Bun script for the tutor e2e test; Bun runs it directly, outside the web build.
+  "exclude": ["e2e/tutor-stub.ts"]
 }
