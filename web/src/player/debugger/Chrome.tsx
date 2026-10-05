@@ -25,8 +25,11 @@ const ICONS = [
   "M3 8h10M8 3v10",
 ];
 
-/** Title strip, menu bar, toolbar, and window tabs. CPU, Log, Breakpoints, and References switch views. */
-export function WindowChrome({ onTab }: { onTab(tab: Tab): void }) {
+/**
+ * Title strip, menu bar, toolbar, and window tabs. CPU, Log, Breakpoints, and References switch views.
+ * Source is live when the lesson lets the learner see the C, and swaps in the whole file.
+ */
+export function WindowChrome({ onTab, source }: { onTab(tab: Tab): void; source?: { open: boolean; toggle(): void } }) {
   const view = useView();
   const { rec, state, session } = view;
   const module = moduleOf(rec, state.rip)?.name ?? "?";
@@ -60,8 +63,9 @@ export function WindowChrome({ onTab }: { onTab(tab: Tab): void }) {
       </div>
       <div className="flex h-6.5 items-end gap-px overflow-hidden border-b border-line px-1" role="tablist">
         {ALL_TABS.map((t) => {
-          const live = (TABS as string[]).includes(t);
-          const active = session.tab === t;
+          const isSource = t === "Source";
+          const live = isSource ? !!source : (TABS as string[]).includes(t);
+          const active = isSource ? !!source?.open : !source?.open && session.tab === t;
           return (
             <button
               key={t}
@@ -69,13 +73,17 @@ export function WindowChrome({ onTab }: { onTab(tab: Tab): void }) {
               role="tab"
               aria-selected={active}
               disabled={!live}
-              onClick={() => live && onTab(t as Tab)}
+              onClick={() => {
+                if (isSource) source?.toggle();
+                else if (live) onTab(t as Tab);
+              }}
               className={cx(
-                "rounded-t-sm px-2.5 py-1 text-[11px]/3.5 whitespace-nowrap",
+                "flex items-center gap-1.25 rounded-t-sm px-2.5 py-1 text-[11px]/3.5 whitespace-nowrap",
                 active ? "bg-raised text-fg" : live ? "text-muted hover:text-fg" : "text-faint",
               )}
             >
               {t}
+              {isSource && active && <span className="size-1.25 shrink-0 rounded-full bg-amber" aria-hidden />}
             </button>
           );
         })}

@@ -12,6 +12,7 @@ import { Dump } from "./debugger/Dump";
 import { ConsoleWindow, ContextMenu, GotoDialog, menuFor, MessageBox } from "./debugger/Overlays";
 import { Locked, Pane } from "./debugger/Pane";
 import { Registers } from "./debugger/Registers";
+import { SourceView } from "./debugger/SourceView";
 import { Stack } from "./debugger/Stack";
 import { TabView } from "./debugger/TabView";
 import { ChipBody, Guide } from "./Guide";
@@ -123,6 +124,14 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
   useEffect(() => {
     if (session.view) setSelected("disasm:" + session.view);
   }, [session.view]);
+
+  // Going somewhere in the debugger (following an address, opening another tab) leaves the Source tab.
+  useEffect(() => {
+    if (session.view) setSourceOpen(false);
+  }, [session.view]);
+  useEffect(() => {
+    if (session.tab !== "CPU") setSourceOpen(false);
+  }, [session.tab]);
 
   // Debugger keys go to the lesson, never to the browser.
   const selectedRef = useRef(selected);
@@ -242,7 +251,7 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
                   type="button"
                   onClick={() => setSourceOpen((o) => !o)}
                   aria-pressed={sourceOpen}
-                  className="flex h-7 items-center gap-1.5 rounded-md border border-amber-line px-2.5 text-xs text-fg hover:border-amber-dim aria-pressed:border-amber-dim"
+                  className="flex h-7 items-center gap-1.5 rounded-md border border-amber-line px-2.5 text-xs text-fg hover:border-amber-dim aria-pressed:border-amber aria-pressed:bg-rip"
                 >
                   Source <Keycap small>S</Keycap>
                 </button>
@@ -251,8 +260,20 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
 
             <div className="flex min-h-0 grow">
               <div className="relative flex min-w-0 grow flex-col overflow-hidden">
-                {tool === "x64dbg" ? <WindowChrome onTab={(tab) => dispatch({ type: "tab", tab })} /> : <ToolChrome lesson={lesson} />}
-                {tool === "hex" && file ? (
+                {tool === "x64dbg" ? (
+                  <WindowChrome
+                    onTab={(tab) => {
+                      setSourceOpen(false);
+                      dispatch({ type: "tab", tab });
+                    }}
+                    source={lesson.challenge ? undefined : { open: sourceOpen, toggle: () => setSourceOpen((o) => !o) }}
+                  />
+                ) : (
+                  <ToolChrome lesson={lesson} />
+                )}
+                {sourceOpen && !lesson.challenge ? (
+                  <SourceView source={lesson.source} live={tool === "x64dbg"} />
+                ) : tool === "hex" && file ? (
                   <div className="flex min-h-0 grow">
                     <HexView />
                     <Inspector />
@@ -306,7 +327,6 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
                     lesson={lesson}
                     state={ls}
                     dispatch={dispatch}
-                    sourceOpen={sourceOpen}
                     misses={misses}
                     onTalk={() => {
                       setRail("ask");

@@ -257,7 +257,9 @@ function appModule(spec: AppSpec, { symbols }: Build): { module: ProgramModule; 
 
   const { rows: out, labels } = assemble(rows);
   labelsRef.current = labels;
-  return { module: { name: exe + ".exe", base: 0x140000000n, size: 0x7000, rows: out }, labels };
+  // Line numbers come from the PDB, so a build without one has none.
+  const shipped = symbols ? out : out.map(({ line: _line, ...row }) => row);
+  return { module: { name: exe + ".exe", base: 0x140000000n, size: 0x7000, rows: shipped }, labels };
 }
 
 /* ------------------------------------------------------------------ */

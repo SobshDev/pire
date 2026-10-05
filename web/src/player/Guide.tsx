@@ -11,14 +11,13 @@ interface GuideProps {
   lesson: Lesson;
   state: LessonState;
   dispatch(event: PlayerEvent): void;
-  sourceOpen: boolean;
   /** Wrong answers on the current step. */
   misses: number;
   /** Open the Ask tab to talk the step through with the tutor. */
   onTalk(): void;
 }
 
-export function Guide({ lesson, state, dispatch, sourceOpen, misses, onTalk }: GuideProps) {
+export function Guide({ lesson, state, dispatch, misses, onTalk }: GuideProps) {
   if (lesson.challenge) return <ChallengeGuide lesson={lesson} state={state} dispatch={dispatch} misses={misses} onTalk={onTalk} />;
   const step = lesson.steps[state.stepIndex];
   if (!step) return <aside className="min-h-0 grow bg-guide" />;
@@ -26,7 +25,7 @@ export function Guide({ lesson, state, dispatch, sourceOpen, misses, onTalk }: G
   const sameSection = lesson.steps.filter((s) => s.section === step.section);
   const position = lesson.steps.slice(0, state.stepIndex + 1).filter((s) => s.section === step.section).length;
   const kicker = (step.section === "beat" ? "Beat " : "Checkpoint ") + position + " · " + step.kind;
-  const sourceRegion = step.source ?? (sourceOpen ? "" : undefined);
+  const sourceRegion = step.source;
 
   return (
     <aside className="flex min-h-0 grow flex-col bg-guide" aria-label="Guide">
@@ -119,7 +118,7 @@ export function Guide({ lesson, state, dispatch, sourceOpen, misses, onTalk }: G
 const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 1009, 7);
 
 /** Challenges: the goal list, the current goal's answer box, and a shared pool of hint tokens. */
-function ChallengeGuide({ lesson, state, dispatch, misses, onTalk }: Omit<GuideProps, "sourceOpen">) {
+function ChallengeGuide({ lesson, state, dispatch, misses, onTalk }: GuideProps) {
   const step = lesson.steps[state.stepIndex];
   const tokensLeft = lesson.hintTokens - state.hintsUsed;
   const revealed = step ? step.hints.slice(0, state.hintsShown) : [];
