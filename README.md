@@ -45,9 +45,9 @@ End-to-end tests play every lesson in Chromium against a running server:
 ## Deploy on Dokploy
 
 The Dockerfile builds one image that serves the API at /api and the frontend everywhere else.
-compose.prod.yaml runs that image next to its own Postgres.
+docker-compose.yml runs that image next to its own Postgres.
 
-1. Create a Docker Compose service from this repository, branch main, compose path ./compose.prod.yaml.
+1. Create a Docker Compose service from this repository, branch main, compose path ./docker-compose.yml.
 2. Set the environment:
    - POSTGRES_PASSWORD: a URL-safe password (letters and digits), used by both containers
    - TUTOR_BASE_URL, TUTOR_API_KEY, TUTOR_MODEL, TUTOR_MAX_TOKENS: optional, for the AI tutor
