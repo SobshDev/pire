@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-label="pire: learn reverse engineering on x64 Windows">
+  <defs>
+    <linearGradient id="fade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#0d0c0a" stop-opacity="0.35"/>
+      <stop offset="0.55" stop-color="#0d0c0a" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#0d0c0a" stop-opacity="1"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.68" cy="0.5" r="0.45">
+      <stop offset="0" stop-color="#ffb224" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#ffb224" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="r"><rect width="1280" height="360" rx="18"/></clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="1280" height="360" fill="#0d0c0a"/>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#3a2c10"><text x="40" y="34">0000000140001000  FF 21 45 E8 00 E8 21 00 90 00 00 86 83 00 48 FF</text><text x="40" y="56">0000000140001010  00 50 CC C3 8D 00 C3 90 00 64 C9 00 00 00 90 FF</text><text x="40" y="78">0000000140001020  85 00 FF 21 4D FF 00 00 E8 CC C9 00 C3 58 45 00</text><text x="40" y="100">0000000140001030  CC 00 4D 0D 5A 00 00 FF B8 3F 00 FF C9 3F 3F 03</text><text x="40" y="122">0000000140001040  FF 03 50 64 FF C9 00 58 00 5A 00 48 00 86 58 83</text><text x="40" y="144">0000000140001050  48 10 58 5A 00 48 C3 04 00 00 00 10 0D 58 00 4D</text><text x="40" y="166">0000000140001060  B8 00 00 86 C3 15 00 00 FF 15 00 03 C3 00 8D 00</text><text x="40" y="188">0000000140001070  10 CC 00 00 8D 00 45 00 83 85 00 03 00 48 00 5A</text><text x="40" y="210">0000000140001080  00 00 3F 3F 21 8D 21 00 00 03 B8 86 10 00 E8 00</text><text x="40" y="232">0000000140001090  83 50 FF 00 00 00 10 FF 00 00 04 5A FF 00 8D FF</text><text x="40" y="254">00000001400010A0  00 FF 90 00 00 90 C9 4D CC 00 E8 00 00 B8 83 00</text><text x="40" y="276">00000001400010B0  58 E8 83 00 EC 00 15 33 45 EC 90 00 50 00 FF 50</text><text x="40" y="298">00000001400010C0  C3 C3 CC 90 EC EC 5A 0D 00 3F C3 00 00 5A C9 00</text><text x="40" y="320">00000001400010D0  00 04 04 4D 00 E8 00 04 E8 00 04 4D 00 CC 00 00</text><text x="40" y="342">00000001400010E0  83 E8 83 3F C3 00 EC 4D 90 5A 48 21 00 00 E8 83</text></g>
+    <rect x="0" y="122" width="1280" height="22" fill="#2b2110" opacity="0.55"/>
+    <text x="16" y="138" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" fill="#8a6516">RIP</text>
+    <rect width="1280" height="360" fill="url(#fade)"/>
+    <rect width="1280" height="360" fill="url(#glow)"/>
+    <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="start">
+      <text x="640" y="208" font-size="128" fill="#ffb224" font-weight="400">π</text>
+      <text x="712" y="208" font-size="112" fill="#ece7de" font-weight="800" letter-spacing="-2">RE</text>
+      <text x="644" y="258" font-size="24" fill="#ece7de" font-weight="500">Learn reverse engineering by doing it.</text>
+      <text x="644" y="292" font-size="17" fill="#948d81">A guided x64dbg, hex and PE viewer in your browser.</text>
+    </g>
+    <rect x="0.5" y="0.5" width="1279" height="359" rx="18" fill="none" stroke="#3a2c10"/>
+  </g>
+</svg>
