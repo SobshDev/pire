@@ -16,6 +16,7 @@ import { argumentsAndReturnValues } from "./modules/m3/l1-arguments-and-return-v
 import { shadowSpaceAndAlignment } from "./modules/m3/l2-shadow-space-and-alignment";
 import { prologueEpilogue } from "./modules/m3/l3-prologue-epilogue";
 import { volatileNonvolatile } from "./modules/m3/l4-volatile-nonvolatile";
+import { floatingPointArguments } from "./modules/m3/l5-floating-point-arguments";
 import { vaultRecordings } from "./specimens/vault";
 import { vault2Recordings } from "./specimens/vault2";
 import { callsRecordings } from "./specimens/calls";
@@ -67,7 +68,7 @@ export const lessons: Record<string, Lesson> = Object.fromEntries(
   [
     tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain, theVault,
     peLayout, threeKindsOfAddress, importsAndExports, doubleClickToMain, usingAPeViewer, passportControl,
-    argumentsAndReturnValues, shadowSpaceAndAlignment, prologueEpilogue, volatileNonvolatile,
+    argumentsAndReturnValues, shadowSpaceAndAlignment, prologueEpilogue, volatileNonvolatile, floatingPointArguments,
   ].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];
