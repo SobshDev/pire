@@ -148,9 +148,9 @@ You need [Bun](https://bun.sh), [Rust](https://rustup.rs), and Docker.
 
 ```sh
 bun install
-docker compose up -d db          # Postgres on localhost:5433
+POSTGRES_PASSWORD=replace-me-with-a-long-random-password docker compose up -d db  # Postgres on localhost:5433
 cp api/.env.example api/.env
-(cd api && cargo run)            # API on :8080, runs migrations on start
+(cd api && DATABASE_URL='postgres://pire:replace-me-with-a-long-random-password@localhost:5433/pire' cargo run)  # API on :8080, runs migrations on start
 bun run dev                      # Vite on :5173, proxies /api to :8080
 ```
 
@@ -163,7 +163,7 @@ When you change an API type, regenerate the client types with `bun run --cwd web
 ```sh
 bun run typecheck
 bun run test                     # lesson engine unit tests (vitest)
-(cd api && DATABASE_URL=postgres://pire:pire@localhost:5433/pire cargo test)
+(cd api && DATABASE_URL='postgres://pire:replace-me-with-a-long-random-password@localhost:5433/pire' cargo test)
 ```
 
 End-to-end tests play every lesson in Chromium against a running server:
