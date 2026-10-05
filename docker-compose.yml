@@ -1,20 +1,43 @@
-# Local development database. Production uses a Dokploy Postgres service instead.
+# pire: the app (API + built frontend) and its Postgres.
+# Local dev runs only the database: docker compose up -d db (Postgres on localhost:5433).
+# On Dokploy, set POSTGRES_PASSWORD and the optional TUTOR_* variables, then add the domain to service "app" on port 8080.
 services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://pire:${POSTGRES_PASSWORD:-pire}@db:5432/pire
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      TUTOR_BASE_URL: ${TUTOR_BASE_URL:-}
+      TUTOR_API_KEY: ${TUTOR_API_KEY:-}
+      TUTOR_MODEL: ${TUTOR_MODEL:-claude-sonnet-4-6}
+      TUTOR_MAX_TOKENS: ${TUTOR_MAX_TOKENS:-800}
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - default
+
   db:
     image: postgres:17
+    restart: unless-stopped
     environment:
       POSTGRES_USER: pire
-      POSTGRES_PASSWORD: pire
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pire}
       POSTGRES_DB: pire
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pire-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pire"]
+      test: ["CMD-SHELL", "pg_isready -U pire -d pire"]
       interval: 2s
       timeout: 3s
       retries: 20
+    networks:
+      - default
 
 volumes:
   pire-db:
