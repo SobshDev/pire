@@ -3,7 +3,7 @@
 An easy, guided way to learn reverse engineering on x64 Windows. Each lesson puts you in a recreated
 debugger (x64dbg for Module 1), paused on a real program, and a guide checks every click, answer, and key press.
 
-Lesson designs live in [docs/lessons](docs/lessons). Lesson 1.1 is playable.
+Lesson designs live in [docs/lessons](docs/lessons). Modules 1 to 3 are playable, challenges included.
 
 ## Layout
 
@@ -36,7 +36,7 @@ When you change an API type, regenerate the client types:
     bun run typecheck
     (cd api && DATABASE_URL=postgres://pire:pire@localhost:5433/pire cargo test)
 
-End-to-end tests play lesson 1.1 in Chromium against a running server:
+End-to-end tests play every lesson in Chromium against a running server:
 
     bun run build
     (cd api && STATIC_DIR=../web/dist cargo run)
