@@ -525,6 +525,14 @@ export function groupOf(pe: PeFile, id: string): PeGroup {
   return g;
 }
 
+/** Where a field or structure sits in the file, in the forms lessons use: "F8", 4, and the target range "hex:F8-FB". */
+export function where(pe: PeFile, id: string): { at: string; offset: number; size: number; range: string; end: string } {
+  const f = pe.fields.find((x) => x.id === id) ?? pe.groups.find((x) => x.id === id);
+  if (!f) throw new Error(pe.id + " has no field or structure " + id);
+  const hx = (n: number) => n.toString(16).toUpperCase();
+  return { at: hx(f.offset), offset: f.offset, size: f.size, range: "hex:" + hx(f.offset) + "-" + hx(f.offset + f.size - 1), end: hx(f.offset + f.size) };
+}
+
 /** Reads a little-endian number from the file. */
 export function readLE(pe: PeFile, off: number, size: number): bigint {
   let v = 0n;

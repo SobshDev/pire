@@ -30,3 +30,27 @@ export async function expectComplete(page: Page) {
   await expect(done).toBeVisible();
   return done;
 }
+
+const hx = (n: number) => n.toString(16).toUpperCase();
+/** A byte in the hex viewer's hex column. */
+export const byte = (page: Page, off: number) => target(page, "hex:" + hx(off)).first();
+
+/** Drags across bytes in the hex viewer, like a learner selecting a field. */
+export async function selectBytes(page: Page, from: number, length: number) {
+  const a = await byte(page, from).boundingBox();
+  const b = await byte(page, from + length - 1).boundingBox();
+  if (!a || !b) throw new Error("bytes not on screen");
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 });
+  await page.mouse.up();
+}
+
+export async function answer(page: Page, value: string) {
+  await guide(page).getByLabel("Your answer").fill(value);
+  await guide(page).getByRole("button", { name: "Check" }).click();
+}
+
+export async function order(page: Page, items: string[]) {
+  for (const item of items) await guide(page).getByRole("button", { name: item, exact: true }).click();
+}

@@ -444,6 +444,16 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
   }
   if (!step || l.done) return state;
 
+  // The hex viewer's Ctrl+G always works once the dialog exists, like in a real hex editor.
+  const gotoGate = step.gate.type === "command" && step.gate.surface === "goto";
+  if (toolOf(state.session) === "hex" && !gotoGate) {
+    if (event.type === "key" && event.key === "Ctrl+G") return { ...state, session: { ...state.session, goto: "hex" } };
+    if (event.type === "command" && event.surface === "goto") {
+      const r = runGoto(rec, state.session, event.text);
+      return r.ok ? { ...state, session: r.session } : info(state, "Type an offset in hex, such as F8.");
+    }
+  }
+
   if (event.type === "continue") {
     if (l.phase === "success") return advance(lesson, state);
     return step.gate.type === "continue" ? pass(lesson, state, step) : state;
@@ -495,6 +505,18 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
   switch (gate.type) {
     case "click": {
       if (event.type !== (gate.double ? "dblclick" : "click")) return guided(current, event, free);
+      if (gate.all) {
+        const hit = gate.accept.find((p) => matchesTarget(p, event.target));
+        if (!hit) {
+          // Clicks elsewhere are just looking around unless the lesson names them as mistakes.
+          const wrong = gate.wrong.find((w) => matchesTarget(w.match, event.target));
+          return wrong ? miss(current, wrong.feedback) : current;
+        }
+        if (l.ordered.includes(hit)) return current;
+        const ordered = [...l.ordered, hit];
+        const next = withLesson(current, { ordered, feedback: null });
+        return ordered.length === gate.accept.length ? pass(lesson, next, step) : next;
+      }
       if (gate.accept.some((p) => matchesTarget(p, event.target))) return pass(lesson, current, step);
       const wrong = gate.wrong.find((w) => matchesTarget(w.match, event.target));
       return miss(current, wrong?.feedback ?? gate.fallback);

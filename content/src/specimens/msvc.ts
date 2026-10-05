@@ -563,7 +563,17 @@ const UNWIND_AT = 0x3300;
  * strings, the initial globals, and exception tables. The ASLR build sets DYNAMIC_BASE and adds .reloc
  * entries for the pointers stored in .data.
  */
+const peCache = new Map<string, PeFile>();
 export function peFileFor(spec: AppSpec, opts: { aslr: boolean }): PeFile {
+  const key = spec.exe + (opts.aslr ? "-aslr" : "");
+  const hit = peCache.get(key);
+  if (hit) return hit;
+  const pe = buildPeFile(spec, opts);
+  peCache.set(key, pe);
+  return pe;
+}
+
+function buildPeFile(spec: AppSpec, opts: { aslr: boolean }): PeFile {
   const program = buildProgram(spec, { symbols: false });
   const app = program.modules[0]!;
   const rva = (a: bigint) => Number(a - IMAGE_BASE);

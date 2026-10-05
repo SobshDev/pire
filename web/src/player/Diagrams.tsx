@@ -60,7 +60,7 @@ function Alignment({ file }: { file: PeFile }) {
             className="absolute inset-y-0 flex items-center justify-center overflow-hidden border-r border-ink font-mono text-[10px] text-ink"
             style={{ left: (p.from / total) * 100 + "%", width: (p.size / total) * 100 + "%", backgroundColor: COLORS[p.name] ?? "#6C8AA9" }}
           >
-            {p.size / total > 0.07 ? p.name : ""}
+            {p.size / total > 0.11 ? p.name : ""}
           </span>
         ))}
       </div>

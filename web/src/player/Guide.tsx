@@ -193,7 +193,7 @@ function Figure({ figure }: { figure: NonNullable<Step["figure"]> }) {
       {figure.rows.map((row) => (
         <div key={row.label} className="flex items-center gap-3 py-0.5">
           <span className="w-20 shrink-0 font-sans text-[11px] text-muted">{row.label}</span>
-          <span className="flex gap-1.5">
+          <span className="flex flex-wrap gap-x-1.5">
             {row.bytes.split(" ").map((b, i) => (
               <span key={i} className={row.highlight.includes(i) ? "rounded-xs bg-amber px-0.5 text-ink" : "px-0.5 text-fg"}>
                 {b}
@@ -333,6 +333,12 @@ function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dis
       );
     case "fill":
       return <FillCard key={state.stepIndex} gate={gate} state={state} dispatch={dispatch} />;
+    case "click":
+      return gate.all ? (
+        <p className="text-xs text-muted" data-testid="found-count">
+          {"Found " + (answered ? gate.accept.length : state.ordered.length) + " of " + gate.accept.length}
+        </p>
+      ) : null;
     default:
       return null;
   }

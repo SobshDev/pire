@@ -99,6 +99,8 @@ export const Gate = z.discriminatedUnion("type", [
     fallback: z.string(),
     /** Needs a double-click, like opening a row in the References tab. */
     double: z.boolean().default(false),
+    /** Every accepted target must be clicked once, in any order, such as each section name. */
+    all: z.boolean().default(false),
   }),
   z.object({
     type: z.literal("key"),

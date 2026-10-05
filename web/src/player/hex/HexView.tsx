@@ -152,10 +152,10 @@ export function HexView() {
             const labels = labelsAt(row);
             return (
               <div key={row} className="absolute inset-x-0 flex items-center" style={{ top: row * ROW, height: ROW }}>
-                <span className={cx("w-24 px-2", sel && base <= sel[0] && sel[0] < base + 16 ? "text-amber" : "text-muted")}>
+                <span className={cx("w-24 shrink-0 px-2", sel && base <= sel[0] && sel[0] < base + 16 ? "text-amber" : "text-muted")}>
                   {base.toString(16).toUpperCase().padStart(8, "0")}
                 </span>
-                <span className="flex">
+                <span className="flex shrink-0">
                   {Array.from({ length: 16 }, (_, i) => {
                     const o = base + i;
                     if (o >= file.bytes.length) return <span key={i} className={cx("w-6.5", i === 8 && "ml-2")} />;
@@ -168,7 +168,7 @@ export function HexView() {
                     );
                   })}
                 </span>
-                <span className="ml-5 flex w-36">
+                <span className="ml-5 flex w-36 shrink-0">
                   {Array.from({ length: 16 }, (_, i) => {
                     const o = base + i;
                     if (o >= file.bytes.length) return null;
@@ -334,4 +334,3 @@ export function Converter({ file }: { file: PeFile }) {
     </section>
   );
 }
-
