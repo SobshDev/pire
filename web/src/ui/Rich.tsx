@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { cx } from "./bits";
+import { cx, keyLabel } from "./bits";
 
 /**
  * Lesson text with Markdown-style code spans. Wrap a token in backticks and it renders as a chip
@@ -17,7 +17,7 @@ export function Rich({ text }: { text: string }) {
         let around = part;
         if (i > 0 && isBlock(parts[i - 1]!)) around = around.replace(/^[.,;:]?\s*/, "");
         if (i < parts.length - 1 && isBlock(parts[i + 1]!)) around = around.trimEnd();
-        return <Fragment key={i}>{around}</Fragment>;
+        return <Fragment key={i}>{keyLabel(around)}</Fragment>;
       })}
     </>
   );
@@ -26,7 +26,7 @@ export function Rich({ text }: { text: string }) {
 /** The text without its backticks, for aria labels and other plain-text uses. */
 export const plain = (text: string) => text.replace(/`([^`]+)`/g, "$1");
 
-const KEY = /^(?:(?:Ctrl|Shift|Alt)\+\S+|F(?:1[0-2]|[1-9])|\*)$/;
+const KEY = /^(?:(?:Ctrl|Cmd|Shift|Alt)\+\S+|F(?:1[0-2]|[1-9])|\*)$/;
 const REGISTER =
   /^(?:R[ABCD]X|R[SD]I|R[SB]P|RIP|E[ABCD]X|E[SD]I|E[SB]P|R(?:[89]|1[0-5])[DWB]?|XMM(?:[0-9]|1[0-5])|RFLAGS|[ZCSOPAD]F|TF|IF|[ABCD][XLH])$/;
 const NUMBER = /^(?:0x[0-9A-Fa-f]+|[0-9A-F]{4,16})$/;
@@ -42,7 +42,7 @@ const isBlock = (code: string) => isInstruction(code) && code.includes(" ");
 export function Code({ code }: { code: string }) {
   // Inline, unlike the toolbar Keycap, so the key reads as part of the sentence (and of accessible names).
   if (KEY.test(code)) {
-    return <kbd className="rounded-sm border border-b-2 border-faint bg-raised px-1 py-px font-mono text-[0.8em] font-medium text-fg">{code}</kbd>;
+    return <kbd className="rounded-sm border border-b-2 border-faint bg-raised px-1 py-px font-mono text-[0.8em] font-medium text-fg">{keyLabel(code)}</kbd>;
   }
   if (REGISTER.test(code)) return <code className={cx(chip, "border-[#5EB0EF]/35 bg-[#5EB0EF]/10 text-[#9CCDF5]")}>{code}</code>;
   if (NUMBER.test(code)) return <code className={cx(chip, "border-[#B58CF0]/35 bg-[#B58CF0]/10 text-[#CDB3F5]")}>{code}</code>;

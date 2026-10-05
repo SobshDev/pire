@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useSaveProgress } from "../api/queries";
 import { bestMedal, DEBUG_KEYS, initialState, medal, reduce, revealed, toolOf, type Medal, type PlayerEvent, type PlayerState, type Resume } from "../engine/lesson";
-import { cx, Keycap, Logo } from "../ui/bits";
+import { cx, IS_MAC, Keycap, Logo } from "../ui/bits";
 import { Completion } from "./Completion";
 import { CommandBar, StatusBar, WindowChrome } from "./debugger/Chrome";
 import { Disassembly, type DisassemblyHandle } from "./debugger/Disassembly";
@@ -28,13 +28,13 @@ type Action = PlayerEvent | { type: "reset" };
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 
-/** "F9", "Ctrl+F9", "Ctrl+G", "*", "Space", "Delete", as lesson gates name them. */
+/** "F9", "Ctrl+F9", "Ctrl+G", "*", "Space", "Delete", as lesson gates name them. On a Mac, Cmd counts as Ctrl. */
 export function keyName(e: KeyboardEvent): string | null {
   let k = e.key;
   if (k === " ") k = "Space";
   else if (k === "Backspace" || k === "Del") k = "Delete";
   else if (k.length === 1 && k !== "*") k = k.toUpperCase();
-  if (e.ctrlKey && k !== "Control") return "Ctrl+" + k;
+  if ((e.ctrlKey || (IS_MAC && e.metaKey)) && k !== "Control" && k !== "Meta") return "Ctrl+" + k;
   return k;
 }
 
@@ -138,9 +138,10 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
   selectedRef.current = selected;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.altKey) return;
+      if (e.altKey || (e.metaKey && !IS_MAC)) return;
+      const ctrl = e.ctrlKey || e.metaKey;
       // Function keys and Ctrl+G work from anywhere, like the real tools' global shortcuts; other keys belong to the text box.
-      const fKey = /^F([1-9]|1[0-2])$/.test(e.key) || (e.ctrlKey && e.key.toLowerCase() === "g");
+      const fKey = /^F([1-9]|1[0-2])$/.test(e.key) || (ctrl && e.key.toLowerCase() === "g");
       if (isTyping(e.target) && !fKey) return;
       const key = keyName(e);
       if (!key) return;
@@ -151,7 +152,8 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
         if (key === "*") requestAnimationFrame(() => disasm.current?.goToRip());
         return;
       }
-      if (e.ctrlKey) return;
+      // Leave the browser's own Cmd shortcuts (copy, reload, ...) alone.
+      if (ctrl) return;
       if (key === "Enter" && !(e.target instanceof HTMLButtonElement)) {
         e.preventDefault();
         dispatch({ type: "continue" });
