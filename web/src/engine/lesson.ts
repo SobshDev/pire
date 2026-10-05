@@ -469,6 +469,17 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
       return r.ok ? { ...state, session: r.session } : info(state, "Type an offset in hex, such as F8.");
     }
   }
+  // Once a lesson has taught Ctrl+G in x64dbg, it keeps working on later steps so you can look around or fix a wrong jump.
+  const gotoAsking = gotoGate && l.phase === "asking";
+  if (toolOf(state.session) === "x64dbg" && !gotoAsking && l.keys.includes("Ctrl+G") && !(step.free || step.gate.type === "goal")) {
+    if (event.type === "key" && event.key === "Ctrl+G") {
+      return { ...state, session: performKey(rec, state.session, event.key, event.selected) ?? state.session };
+    }
+    if (event.type === "command" && event.surface === "goto") {
+      const r = runGoto(rec, state.session, event.text);
+      return r.ok ? { ...state, session: r.session } : info({ ...state, session: r.session }, "x64dbg didn't understand that expression.");
+    }
+  }
 
   if (event.type === "continue") {
     if (l.phase === "success") return advance(lesson, state);
@@ -564,6 +575,14 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
       if (gate.accept.some((a) => normalizeCommand(a) === said)) {
         if (free) return pass(lesson, current, step);
         const r = gate.surface === "goto" ? runGoto(rec, current.session, event.text) : D.command(rec, current.session, event.text);
+        // Ctrl+G follows in whichever pane had the selection. Following in the wrong one doesn't finish the step.
+        const opened = current.session.goto;
+        if (gate.pane && (opened === "dump" || opened === "disassembly") && opened !== gate.pane) {
+          const want = gate.pane === "dump" ? "Dump" : "Disassembler";
+          const got = opened === "dump" ? "Dump" : "Disassembler";
+          const click = gate.pane === "dump" ? "a byte in the dump" : "a line in the disassembly";
+          return info({ ...current, session: { ...r.session, goto: null } }, "That followed it in the " + got + ". Click " + click + " first so Ctrl+G opens for the " + want + ", then try again.");
+        }
         return pass(lesson, { ...current, session: r.session }, step);
       }
       const wrong = gate.wrong.find((w) => normalizeCommand(w.match) === said);

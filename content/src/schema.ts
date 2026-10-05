@@ -117,6 +117,8 @@ export const Gate = z.discriminatedUnion("type", [
     type: z.literal("command"),
     /** The command bar, or the Ctrl+G "follow expression" dialog. */
     surface: z.enum(["command", "goto"]),
+    /** For "goto": the pane the expression must be followed in. Ctrl+G opens for the pane with the selection. */
+    pane: z.enum(["dump", "disassembly"]).optional(),
     /** Accepted inputs, compared without case and with spaces collapsed. */
     accept: z.array(z.string()).min(1),
     wrong: z.array(WrongAnswer).default([]),

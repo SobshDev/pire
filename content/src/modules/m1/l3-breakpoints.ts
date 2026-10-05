@@ -148,6 +148,7 @@ export const breakpoints: LessonInput = {
       gate: {
         type: "command",
         surface: "goto",
+        pane: "dump",
         accept: ["g_attempts", "vault.g_attempts", sym.g_attempts, "0x" + sym.g_attempts.replace(/^0+/, ""), sym.g_attempts.replace(/^0+/, "")],
         fallback: "Type g_attempts in the box and press Enter.",
       },
