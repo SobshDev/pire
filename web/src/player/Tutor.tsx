@@ -1,10 +1,12 @@
 import { Chat, useChat } from "@ai-sdk/react";
 import type { Lesson } from "@pire/content";
 import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "@tanstack/react-router";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import { api, unwrap } from "../api/client";
+import { meQuery } from "../api/queries";
 import { cx } from "../ui/bits";
 import { Code, CodeBlock } from "../ui/Rich";
 import { runTool, snapshot, type TutorContext } from "./tutorTools";
@@ -29,8 +31,10 @@ interface TutorProps {
 /** The Ask tab: a chat with the AI tutor, who can see the lesson and the debugger and point at things. */
 export function Tutor(props: TutorProps) {
   const status = useQuery(tutorStatusQuery);
-  if (status.isPending) return null;
+  const me = useQuery(meQuery);
+  if (status.isPending || me.isPending) return null;
   if (!status.data?.enabled) return <Offline onGuide={props.onGuide} />;
+  if (!me.data) return <SignedOut onGuide={props.onGuide} />;
   return <TutorChat key={props.lesson.id} {...props} />;
 }
 
@@ -311,6 +315,30 @@ function Offline({ onGuide }: { onGuide(): void }) {
       <button type="button" onClick={onGuide} className="self-start text-[13px] text-amber hover:underline">
         Back to the guide →
       </button>
+    </div>
+  );
+}
+
+/** The tutor keeps each chat on the server, so it needs an account. The lesson itself doesn't. */
+function SignedOut({ onGuide }: { onGuide(): void }) {
+  const here = useLocation({ select: (l) => l.href });
+  return (
+    <div className="flex flex-col gap-3 px-5 pt-5" data-testid="tutor-signed-out">
+      <h2 className="text-lg/6 font-semibold text-fg">Sign in to ask the tutor</h2>
+      <p className="text-[15px]/6 text-muted">
+        The tutor needs an account. Your progress in this lesson comes with you when you create one.
+      </p>
+      <div className="flex items-center gap-4">
+        <Link to="/register" search={{ redirect: here }} className="h-8 rounded-md bg-amber px-3 text-[13px]/8 font-medium text-ink">
+          Create account
+        </Link>
+        <Link to="/login" search={{ redirect: here }} className="text-[13px] text-fg hover:text-amber">
+          Sign in
+        </Link>
+        <button type="button" onClick={onGuide} className="text-[13px] text-amber hover:underline">
+          Back to the guide →
+        </button>
+      </div>
     </div>
   );
 }

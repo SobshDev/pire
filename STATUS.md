@@ -15,6 +15,7 @@ Last updated: 2026-10-04
   - calls2.exe (the Module 3 challenge)
 - Modules 1, 2 and 3 are playable end to end: every lesson and all three challenges.
 - web/: React SPA with catalog, sign in and sign up, and three tools.
+  - No account needed to play: guests keep progress in localStorage, and it moves to the account on sign up or sign in. The AI tutor still needs an account.
   - x64dbg recreation: disassembly, registers with an XMM view, dump, stack, info box, console, command bar, Ctrl+G, context menus, Breakpoints, References and Call Stack tabs.
   - Hex viewer and PE viewer (PE-bear style tree, header tables, sections, imports).
   - Guide panel: spotlight, pulses, fill cards, stack frame figures, and progress saving and resume.

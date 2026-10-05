@@ -14,7 +14,7 @@ const MEDAL_STYLE: Record<Medal, string> = {
 
 export function CatalogPage() {
   const { data: me } = useQuery(meQuery);
-  const { data: progress = [] } = useQuery({ ...progressQuery, enabled: !!me });
+  const { data: progress = [] } = useQuery(progressQuery);
   const logout = useLogout();
   const navigate = useNavigate();
   const byLesson = new Map(progress.map((p) => [p.lesson_id, p]));
@@ -55,6 +55,15 @@ export function CatalogPage() {
           Each lesson puts you in a real debugger layout, paused on a real program. You click, type, and press keys,
           and the guide checks every step. Ten minutes a lesson, no setup.
         </p>
+        {!me && (
+          <p className="mt-3 max-w-xl text-[13px]/5 text-faint">
+            No account needed. Your progress is saved in this browser, and{" "}
+            <Link to="/register" className="text-amber hover:underline">
+              creating an account
+            </Link>{" "}
+            keeps it on any device.
+          </p>
+        )}
 
         <div className="mt-12 flex flex-col gap-10">
           {catalog.map((mod) => (

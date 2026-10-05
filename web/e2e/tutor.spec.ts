@@ -1,5 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { startLesson, target } from "./helpers";
+import { guide, startLesson, target } from "./helpers";
+
+test("a guest is asked to sign in before using the tutor", async ({ page, request }) => {
+  const status = (await (await request.get("/api/tutor/status")).json()) as { enabled: boolean };
+  test.skip(!status.enabled, "The tutor is off on this server.");
+  await page.goto("/learn/m1.l2");
+  await expect(guide(page)).toBeVisible();
+  await page.getByRole("tab", { name: "Ask" }).click();
+  const prompt = page.getByTestId("tutor-signed-out");
+  await expect(prompt).toContainText("Sign in to ask the tutor");
+  await prompt.getByRole("link", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/register\?redirect=%2Flearn%2Fm1\.l2/);
+});
 
 /**
  * The AI tutor. Against an API started with TUTOR_BASE_URL at e2e/tutor-stub.ts it asks a question,
