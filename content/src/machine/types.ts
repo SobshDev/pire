@@ -14,6 +14,8 @@ export interface CodeRow {
   mnemonic: string;
   operands: string;
   comment?: string;
+  /** The source line this instruction was compiled from, as a PDB line table would give it. */
+  line?: number;
 }
 
 export interface CodeModule {

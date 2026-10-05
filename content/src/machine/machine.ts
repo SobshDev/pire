@@ -306,6 +306,8 @@ type Text = string | ((c: AsmContext) => string);
 export type AsmRow =
   | { org: bigint; fill?: boolean }
   | { align: number }
+  /** Instructions after this marker come from this source line, until the next marker, org, or align. */
+  | { line: number }
   | {
       label?: string;
       /** Instruction bytes, or [length, bytes from context] when they encode an address. */
@@ -325,22 +327,29 @@ export type AsmRow =
  */
 export function assemble(rows: AsmRow[]): { rows: ProgramRow[]; labels: Record<string, bigint> } {
   const labels: Record<string, bigint> = {};
-  const placed: { at: bigint; next: bigint; row: Exclude<AsmRow, { org: bigint } | { align: number }> | null }[] = [];
+  const placed: { at: bigint; next: bigint; line?: number; row: Exclude<AsmRow, { org: bigint } | { align: number } | { line: number }> | null }[] = [];
   let at = 0n;
+  let line: number | undefined;
   for (const row of rows) {
+    if ("line" in row) {
+      line = row.line;
+      continue;
+    }
     if ("align" in row) {
       const n = BigInt(row.align);
+      line = undefined;
       for (; at % n !== 0n; at++) placed.push({ at, next: at + 1n, row: null });
       continue;
     }
     if ("org" in row) {
+      line = undefined;
       if (row.fill) for (let a = at; a < row.org; a++) placed.push({ at: a, next: a + 1n, row: null });
       at = row.org;
       continue;
     }
     const size = typeof row.b === "string" ? byteLength(row.b) : row.b[0];
     if (row.label) labels[row.label] = at;
-    placed.push({ at, next: at + BigInt(size), row });
+    placed.push({ at, next: at + BigInt(size), line, row });
     at += BigInt(size);
   }
   const L = (name: string) => {
@@ -348,7 +357,7 @@ export function assemble(rows: AsmRow[]): { rows: ProgramRow[]; labels: Record<s
     if (v === undefined) throw new Error("unknown label " + name);
     return v;
   };
-  const out = placed.map(({ at, next, row }): ProgramRow => {
+  const out = placed.map(({ at, next, line, row }): ProgramRow => {
     if (!row) return { address: hex(at), bytes: "CC", mnemonic: "int3", operands: "" };
     const c: AsmContext = { at, next, L };
     const text = (t: Text | undefined) => (typeof t === "function" ? t(c) : (t ?? ""));
@@ -359,6 +368,7 @@ export function assemble(rows: AsmRow[]): { rows: ProgramRow[]; labels: Record<s
       mnemonic: row.m,
       operands: text(row.o),
       ...(comment ? { comment } : {}),
+      ...(line ? { line } : {}),
       ...(row.run ? { run: row.run } : {}),
       ...(row.info ? { info: row.info } : {}),
     };
@@ -442,12 +452,13 @@ export function record(program: Program, opts: { id: string; label: string; stdi
     name: mod.name,
     base: hex(mod.base),
     size: mod.size,
-    rows: mod.rows.map(({ address, bytes, mnemonic, operands, comment }) => ({
+    rows: mod.rows.map(({ address, bytes, mnemonic, operands, comment, line }) => ({
       address,
       bytes,
       mnemonic,
       operands,
       ...(comment ? { comment } : {}),
+      ...(line ? { line } : {}),
     })),
   }));
 
