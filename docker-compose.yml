@@ -6,7 +6,7 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://pire:${POSTGRES_PASSWORD:-pire}@db:5432/pire
+      DATABASE_URL: postgres://pire:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set to a strong random password}@db:5432/pire
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       TUTOR_BASE_URL: ${TUTOR_BASE_URL:-}
       TUTOR_API_KEY: ${TUTOR_API_KEY:-}
@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: pire
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pire}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set to a strong random password}
       POSTGRES_DB: pire
     ports:
       - "127.0.0.1:5433:5432"
