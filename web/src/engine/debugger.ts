@@ -127,8 +127,13 @@ export function symbolize(rec: Recording, address: Hex, exactOnly = false): stri
     if (s.kind === "data" || exactOnly) continue;
     if (at < a && a - at < 0x400n && (!best || at > best.at)) best = { name: s.name, at };
   }
-  if (best) return moduleShort(mod.name) + "." + best.name + "+" + (a - best.at).toString(16).toUpperCase();
+  // An offset only makes sense inside the symbol's own function, so int3 padding in between rules it out.
+  if (best && !crossesPadding(mod, best.at, a)) return moduleShort(mod.name) + "." + best.name + "+" + (a - best.at).toString(16).toUpperCase();
   return exactOnly ? null : moduleShort(mod.name) + "." + address;
+}
+
+function crossesPadding(mod: { rows: { address: Hex; mnemonic: string }[] }, from: bigint, to: bigint): boolean {
+  return mod.rows.some((r) => r.mnemonic === "int3" && big(r.address) > from && big(r.address) < to);
 }
 
 /** The address an expression names: hex, a register, or a symbol such as MessageBoxA or user32.MessageBoxA. */
