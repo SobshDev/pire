@@ -117,3 +117,11 @@ Show calls2.c next to each prototype the learner built, and three notes:
 - At /Od, MSVC may call memset inside fill or inline it. Either is fine; the challenge only looks at the call site.
 - At /Od, MSVC keeps i in count_long's stack frame. Confirm in the recording and give its [rsp+xx] offset in the bonus answer.
 - Confirm that fill's call site uses mov r8d, 0Fh and pick's uses a 64-bit write to RDX. If not, update goals 2 and 4 and the debrief to match.
+## As built
+
+The playable version (content/src/modules/m3/challenge-call-site-detective.ts, specimen content/src/specimens/calls2) differs from the draft above in three places, all to keep the recording self-contained:
+
+- count_long(words, n) became count_except(words, n, skip), which calls strcmp instead of strlen. strcmp is already in every specimen's import table; adding strlen would have shifted the IAT of every earlier specimen. Goal 6 is now (pointer, 32-bit, pointer) returns 32-bit, and the loop index lives at [rsp+24].
+- fill writes its bytes with a plain loop, so no memset is needed.
+- lerp is called with 1.0f instead of 0.0f, so all three arguments are loaded with movss (MSVC would zero XMM0 with xorps for 0.0f). The program prints "5 AAAAAAAAAAAAAAA 5.333333 -100 3.250000 3".
+- The learner starts paused at main, and each goal names the function's address.

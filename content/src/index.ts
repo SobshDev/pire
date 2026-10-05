@@ -17,10 +17,12 @@ import { shadowSpaceAndAlignment } from "./modules/m3/l2-shadow-space-and-alignm
 import { prologueEpilogue } from "./modules/m3/l3-prologue-epilogue";
 import { volatileNonvolatile } from "./modules/m3/l4-volatile-nonvolatile";
 import { floatingPointArguments } from "./modules/m3/l5-floating-point-arguments";
+import { callSiteDetective } from "./modules/m3/challenge-call-site-detective";
 import { vaultRecordings } from "./specimens/vault";
 import { vault2Recordings } from "./specimens/vault2";
 import { callsRecordings } from "./specimens/calls";
 import { callsReleaseRecordings } from "./specimens/calls/release";
+import { calls2Recordings } from "./specimens/calls2";
 import { peFileFor } from "./specimens/msvc";
 import { vaultSpec } from "./specimens/vault/program";
 import { travelerA, travelerB, travelerC, user32 } from "./specimens/files";
@@ -36,12 +38,15 @@ export const recordings: Record<string, Recording> = Object.fromEntries(
   (() => {
     const calls = callsRecordings();
     const release = callsReleaseRecordings();
+    const calls2 = calls2Recordings();
     return [
       ...[vaultRecordings(), vault2Recordings()].flatMap((v) => [v.wrong, v.right, v.strippedWrong, v.strippedRight]),
       calls.named,
       calls.stripped,
       release.named,
       release.stripped,
+      calls2.named,
+      calls2.stripped,
     ].map((r) => [r.id, r]);
   })(),
 );
@@ -68,7 +73,7 @@ export const lessons: Record<string, Lesson> = Object.fromEntries(
   [
     tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain, theVault,
     peLayout, threeKindsOfAddress, importsAndExports, doubleClickToMain, usingAPeViewer, passportControl,
-    argumentsAndReturnValues, shadowSpaceAndAlignment, prologueEpilogue, volatileNonvolatile, floatingPointArguments,
+    argumentsAndReturnValues, shadowSpaceAndAlignment, prologueEpilogue, volatileNonvolatile, floatingPointArguments, callSiteDetective,
   ].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];

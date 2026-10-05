@@ -192,7 +192,7 @@ export class Machine {
     this.set(dst, r);
     this.logic(r & MASK[alias(dst)[1]], alias(dst)[1]);
   }
-  cond(cc: "e" | "ne" | "z" | "nz" | "g" | "le" | "l" | "ge" | "a" | "b"): boolean {
+  cond(cc: "e" | "ne" | "z" | "nz" | "g" | "le" | "l" | "ge" | "a" | "b" | "ae"): boolean {
     const f = this.flags;
     switch (cc) {
       case "e": case "z": return f.ZF === 1;
@@ -203,6 +203,7 @@ export class Machine {
       case "ge": return f.SF === f.OF;
       case "a": return f.CF === 0 && f.ZF === 0;
       case "b": return f.CF === 1;
+      case "ae": return f.CF === 0;
     }
   }
 
@@ -304,6 +305,7 @@ type Text = string | ((c: AsmContext) => string);
 
 export type AsmRow =
   | { org: bigint; fill?: boolean }
+  | { align: number }
   | {
       label?: string;
       /** Instruction bytes, or [length, bytes from context] when they encode an address. */
@@ -318,13 +320,19 @@ export type AsmRow =
 /**
  * A two-pass assembler for listings: rows are laid out back to back, labels resolve in the second
  * pass, so calls and jumps can encode real displacements. { org } moves to a new address and, with
- * fill, pads the gap with int3 the way MSVC aligns functions.
+ * fill, pads the gap with int3 the way MSVC aligns functions. { align } pads with int3 up to the next
+ * multiple, for code laid out back to back.
  */
 export function assemble(rows: AsmRow[]): { rows: ProgramRow[]; labels: Record<string, bigint> } {
   const labels: Record<string, bigint> = {};
-  const placed: { at: bigint; next: bigint; row: Exclude<AsmRow, { org: bigint }> | null }[] = [];
+  const placed: { at: bigint; next: bigint; row: Exclude<AsmRow, { org: bigint } | { align: number }> | null }[] = [];
   let at = 0n;
   for (const row of rows) {
+    if ("align" in row) {
+      const n = BigInt(row.align);
+      for (; at % n !== 0n; at++) placed.push({ at, next: at + 1n, row: null });
+      continue;
+    }
     if ("org" in row) {
       if (row.fill) for (let a = at; a < row.org; a++) placed.push({ at: a, next: a + 1n, row: null });
       at = row.org;
