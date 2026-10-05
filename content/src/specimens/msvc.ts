@@ -311,7 +311,7 @@ function body(name: Import, work: AsmRow[], frame = 0x28): AsmRow[] {
 function ucrtModule(): ProgramModule {
   const { rows } = assemble([
     ...body("puts", [
-      { b: "48:8BF9", m: "mov", o: "rdi,rcx", run: (m) => { m.print(m.cstr(m.get("rcx")) + "\n"); m.clobber(1); } },
+      { b: "48:8BC1", m: "mov", o: "rax,rcx", run: (m) => { m.print(m.cstr(m.get("rcx")) + "\n"); m.clobber(1); } },
       { b: "33C0", m: "xor", o: "eax,eax", run: (m) => m.xor("eax", "eax") },
     ]),
     ...body("fgets", [
