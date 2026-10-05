@@ -3,7 +3,14 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { catalog, getLesson, type CatalogLesson } from "@pire/content";
 import { meQuery, progressQuery, useLogout } from "../api/queries";
 import type { LessonProgress } from "../api/client";
+import { savedMedal, type Medal } from "../engine/lesson";
 import { cx, Logo } from "../ui/bits";
+
+const MEDAL_STYLE: Record<Medal, string> = {
+  gold: "bg-amber text-ink",
+  silver: "bg-[#C9C4BA] text-ink",
+  bronze: "bg-[#B07A4A] text-ink",
+};
 
 export function CatalogPage() {
   const { data: me } = useQuery(meQuery);
@@ -76,11 +83,17 @@ function LessonRow({ lesson, progress }: { lesson: CatalogLesson; progress?: Les
   const done = !!progress?.completed_at;
   const started = !done && !!progress && progress.beat_index > 0;
   const label = done ? "Completed" : started ? "Resume · " + progress.beat_index + "/" + total : "Start";
+  const earned = playable && progress && getLesson(lesson.id)?.challenge ? savedMedal(progress.state, done) : undefined;
 
   const body = (
     <>
       <span className="w-8 shrink-0 font-mono text-xs text-amber">{lesson.number}</span>
       <span className={cx("grow text-sm", playable ? "text-fg" : "text-faint")}>{lesson.title}</span>
+      {earned && (
+        <span data-testid={"medal-" + lesson.id} className={cx("rounded-full px-2 py-px text-[11px] font-semibold capitalize", MEDAL_STYLE[earned])}>
+          {earned}
+        </span>
+      )}
       <span className="font-mono text-[11px] text-faint">{lesson.minutes + " min"}</span>
       <span
         className={cx(

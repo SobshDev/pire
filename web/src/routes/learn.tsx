@@ -3,6 +3,7 @@ import { useParams } from "@tanstack/react-router";
 import { getLesson } from "@pire/content";
 import { progressQuery } from "../api/queries";
 import type { Session } from "../engine/debugger";
+import { savedMedal } from "../engine/lesson";
 import { Player } from "../player/Player";
 
 export function LearnPage() {
@@ -21,5 +22,6 @@ export function LearnPage() {
         session: state.session && typeof state.session === "object" ? (state.session as Session) : undefined,
       }
     : undefined;
-  return <Player key={lesson.id} lesson={lesson} resume={resume} />;
+  const earned = lesson.challenge && saved ? savedMedal(saved.state, !!saved.completed_at) : undefined;
+  return <Player key={lesson.id} lesson={lesson} resume={resume} earned={earned} />;
 }

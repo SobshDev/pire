@@ -320,6 +320,22 @@ export function medal(hintsUsed: number): Medal {
   return hintsUsed === 0 ? "gold" : hintsUsed <= 2 ? "silver" : "bronze";
 }
 
+const MEDAL_RANK: Record<Medal, number> = { bronze: 1, silver: 2, gold: 3 };
+
+/** The better of two medals, so replaying a challenge never lowers what was earned. */
+export function bestMedal(a: Medal | undefined, b: Medal | undefined): Medal | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  return MEDAL_RANK[a] >= MEDAL_RANK[b] ? a : b;
+}
+
+/** The medal stored with a challenge's saved progress. Older saves only have hintsUsed, which counts if the challenge was completed. */
+export function savedMedal(state: unknown, completed: boolean): Medal | undefined {
+  const s = (state ?? {}) as { medal?: unknown; hintsUsed?: unknown };
+  if (s.medal === "gold" || s.medal === "silver" || s.medal === "bronze") return s.medal;
+  return completed && typeof s.hintsUsed === "number" ? medal(s.hintsUsed) : undefined;
+}
+
 export function checkGoal(rec: Recording, s: Session, check: Check): boolean {
   const st = D.stateOf(rec, s);
   switch (check.kind) {

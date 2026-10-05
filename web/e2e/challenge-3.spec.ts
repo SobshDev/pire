@@ -47,4 +47,11 @@ test("module 3 challenge: call site detective", async ({ page }) => {
   await proceed(page);
   await expectComplete(page);
   await shot(page, "3c-03-debrief");
+
+  // The catalog shows the medal once the completion has been saved.
+  await expect(async () => {
+    await page.goto("/");
+    await expect(page.getByTestId("medal-m3.challenge")).toHaveText("gold", { timeout: 1000 });
+  }).toPass();
+  await shot(page, "3c-04-catalog");
 });

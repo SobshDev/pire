@@ -3,7 +3,7 @@ import { catalog, getFile, getRecording, type Lesson, type PaneId } from "@pire/
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useSaveProgress } from "../api/queries";
-import { DEBUG_KEYS, initialState, reduce, revealed, toolOf, type PlayerEvent, type PlayerState, type Resume } from "../engine/lesson";
+import { bestMedal, DEBUG_KEYS, initialState, medal, reduce, revealed, toolOf, type Medal, type PlayerEvent, type PlayerState, type Resume } from "../engine/lesson";
 import { Keycap, Logo } from "../ui/bits";
 import { Completion } from "./Completion";
 import { CommandBar, StatusBar, WindowChrome } from "./debugger/Chrome";
@@ -35,7 +35,7 @@ export function keyName(e: KeyboardEvent): string | null {
   return k;
 }
 
-export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) {
+export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Resume; earned?: Medal }) {
   const [state, dispatch] = useReducer(
     (s: PlayerState, a: Action) => (a.type === "reset" ? initialState(lesson) : reduce(lesson, s, a)),
     resume,
@@ -60,12 +60,15 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
   const loaded = useRef(true);
   const latest = useRef(state);
   latest.current = state;
+  // The best medal so far, kept across replays in this visit too.
+  const best = useRef(earned);
   useEffect(() => {
     if (loaded.current) {
       loaded.current = false;
       return;
     }
     const s = latest.current;
+    if (lesson.challenge && s.lesson.done) best.current = bestMedal(best.current, medal(s.lesson.hintsUsed));
     save.mutate({
       beat_index: s.lesson.stepIndex,
       completed: s.lesson.done,
@@ -74,6 +77,7 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
         mistakes: s.lesson.mistakes,
         keys: s.lesson.keys,
         hintsUsed: s.lesson.hintsUsed,
+        ...(best.current ? { medal: best.current } : {}),
         session: { ...s.session, log: s.session.log.slice(-50) },
       },
     });
