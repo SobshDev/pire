@@ -48,7 +48,7 @@ export const peLayout: LessonInput = {
       gate: {
         type: "click",
         accept: ["hex:0-1"],
-        fallback: "Look at the very first row, offset 00000000. The text column on the right starts with MZ. Click one of those two bytes, 4D or 5A.",
+        fallback: "Look at the very first row, offset `00000000`. The text column on the right starts with MZ. Click one of those two bytes, 4D or 5A.",
       },
       hints: ["The answer is on the first row.", "4D is the letter M and 5A is the letter Z."],
       success:
@@ -61,7 +61,7 @@ export const peLayout: LessonInput = {
       kind: "Predict",
       title: "The signpost at 0x3C",
       say:
-        "At offset 0x3C the DOS header holds e_lfanew: the file offset of the real header. It's a 4-byte little-endian number, just like g_attempts in Lesson 1.4. Read the 4 pulsing bytes. What offset do they point to?",
+        "At offset `0x3C` the DOS header holds e_lfanew: the file offset of the real header. It's a 4-byte little-endian number, just like g_attempts in Lesson 1.4. Read the 4 pulsing bytes. What offset do they point to?",
       pulse: [lfanew.range],
       gate: {
         type: "predict",
@@ -70,9 +70,9 @@ export const peLayout: LessonInput = {
         placeholder: "hex, like 1A0",
         wrong: [
           { match: hx(pe.lfanew) + "000000", feedback: "That's the bytes read left to right. Little-endian means the first byte is the lowest. Flip them." },
-          { match: "3C", feedback: "0x3C is where the field is. Read the 4 bytes stored there." },
+          { match: "3C", feedback: "`0x3C` is where the field is. Read the 4 bytes stored there." },
         ],
-        fallback: "Read the 4 bytes at 0x3C from right to left: the last byte is the highest. Leading zeros don't matter.",
+        fallback: "Read the 4 bytes at `0x3C` from right to left: the last byte is the highest. Leading zeros don't matter.",
       },
       hints: ["The bytes are " + Array.from(pe.bytes.slice(0x3c, 0x40), (b) => hx(b).padStart(2, "0")).join(" ") + ".", "Right to left that's 000000" + hx(pe.lfanew) + "."],
       success: "0x" + hx(pe.lfanew) + ". The real header starts " + pe.lfanew + " bytes into the file. Everything between here and there is filler from the DOS days, now marked in grey.",
@@ -84,7 +84,7 @@ export const peLayout: LessonInput = {
       kind: "Key",
       title: "Jump there",
       say:
-        'Between the DOS header and the real header is a tiny DOS program that prints "This program cannot be run in DOS mode." (you can read it in the text column), and a block the Microsoft linker adds called the Rich header. Neither matters for us. Jump to the real header: press Ctrl+G and type the offset.',
+        'Between the DOS header and the real header is a tiny DOS program that prints "This program cannot be run in DOS mode." (you can read it in the text column), and a block the Microsoft linker adds called the Rich header. Neither matters for us. Jump to the real header: press `Ctrl+G` and type the offset.',
       action: "Ctrl+G, then type " + hx(pe.lfanew),
       gate: {
         type: "command",
@@ -119,24 +119,24 @@ export const peLayout: LessonInput = {
       setup: { helper: true },
       pulse: [machine.range],
       gate: { type: "select", start: machine.at, length: 2, fallback: "Select the 2 bytes right after 50 45 00 00." },
-      success: "The helper reads them as 0x8664. Look at it on the right.",
+      success: "The helper reads them as `0x8664`. Look at it on the right.",
       reveal: ["file", "file.Machine"],
     },
     {
       section: "beat",
       kind: "Choose",
       title: "0x8664 means...",
-      say: "Machine is 0x8664. Which CPU is that?",
+      say: "Machine is `0x8664`. Which CPU is that?",
       gate: {
         type: "choose",
         correct: "x64",
         options: [
           { id: "x64", label: "x64 (64-bit Intel and AMD)" },
-          { id: "x86", label: "32-bit x86", feedback: "A 32-bit program would say 0x014C here." },
-          { id: "arm", label: "ARM64", feedback: "ARM64 is 0xAA64." },
+          { id: "x86", label: "32-bit x86", feedback: "A 32-bit program would say `0x014C` here." },
+          { id: "arm", label: "ARM64", feedback: "ARM64 is `0xAA64`." },
         ],
       },
-      success: "x64. A 32-bit program would say 0x014C. Checking this field is the first thing you do with a new file.",
+      success: "x64. A 32-bit program would say `0x014C`. Checking this field is the first thing you do with a new file.",
     },
     {
       section: "beat",
@@ -159,10 +159,10 @@ export const peLayout: LessonInput = {
       kind: "Select",
       title: "The optional header (not optional)",
       say:
-        "After the 20-byte file header comes the 'optional' header. It isn't optional for executables. Its first field, Magic, is 0x20B for 64-bit files (PE32+) and 0x10B for 32-bit ones. Select Magic.",
+        "After the 20-byte file header comes the 'optional' header. It isn't optional for executables. Its first field, Magic, is `0x20B` for 64-bit files (PE32+) and `0x10B` for 32-bit ones. Select Magic.",
       pulse: [magic.range],
       gate: { type: "select", start: magic.at, length: 2, fallback: "Magic is the 2 bytes right after the file header, at offset 0x" + magic.at + "." },
-      success: "0x20B: PE32+, a 64-bit file, matching the machine type.",
+      success: "`0x20B`: PE32+, a 64-bit file, matching the machine type.",
       reveal: ["opt", "opt.Magic"],
     },
     {
@@ -170,7 +170,7 @@ export const peLayout: LessonInput = {
       kind: "Select",
       title: "The entry point",
       say:
-        "AddressOfEntryPoint is where Windows starts running the program. It's 4 bytes, 0x10 bytes into the optional header. In Lesson 1.5, x64dbg stopped there with 'entry breakpoint'. Select it.",
+        "AddressOfEntryPoint is where Windows starts running the program. It's 4 bytes, `0x10` bytes into the optional header. In Lesson 1.5, x64dbg stopped there with 'entry breakpoint'. Select it.",
       pulse: [entry.range],
       gate: { type: "select", start: entry.at, length: 4, fallback: "Select the 4 pulsing bytes at offset 0x" + entry.at + "." },
       success: "0x" + hx(pe.entry) + ".",
@@ -248,7 +248,7 @@ export const peLayout: LessonInput = {
       },
       hints: [
         "Every answer is a field you selected in this lesson.",
-        "The entry point is 0x10 bytes into the optional header. ImageBase is 8 bytes at 0x18 into it.",
+        "The entry point is `0x10` bytes into the optional header. ImageBase is 8 bytes at `0x18` into it.",
         "x64, PE32+, " + n + ", " + hx(pe.entry) + ", " + hx(pe.imageBase) + ".",
       ],
     },
@@ -261,12 +261,12 @@ export const peLayout: LessonInput = {
         type: "choose",
         correct: "x86",
         options: [
-          { id: "x64", label: "A 64-bit x64 program", feedback: "Flip it: 0x014C, which is 32-bit." },
+          { id: "x64", label: "A 64-bit x64 program", feedback: "Flip it: `0x014C`, which is 32-bit." },
           { id: "x86", label: "A 32-bit x86 program" },
-          { id: "arm", label: "An ARM64 program", feedback: "ARM64 is 0xAA64. Flip these bytes first." },
+          { id: "arm", label: "An ARM64 program", feedback: "ARM64 is `0xAA64`. Flip these bytes first." },
         ],
       },
-      success: "0x014C, a 32-bit program. You'll meet one in the module challenge.",
+      success: "`0x014C`, a 32-bit program. You'll meet one in the module challenge.",
     },
     {
       section: "checkpoint",

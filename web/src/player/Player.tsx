@@ -25,12 +25,8 @@ type Action = PlayerEvent | { type: "reset" };
 const isTyping = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 
-/**
- * "F9", "Ctrl+F9", "Ctrl+G", "*", "Space", "Delete", as lesson gates name them. * counts however the
- * keyboard layout produces it: Shift+8, the numpad, or a layout that needs Option or AltGr.
- */
+/** "F9", "Ctrl+F9", "Ctrl+G", "*", "Space", "Delete", as lesson gates name them. */
 export function keyName(e: KeyboardEvent): string | null {
-  if (e.key === "*" || e.code === "NumpadMultiply" || (e.key === "8" && e.code === "Digit8" && e.shiftKey)) return "*";
   let k = e.key;
   if (k === " ") k = "Space";
   else if (k === "Backspace" || k === "Del") k = "Delete";
@@ -98,8 +94,7 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
   selectedRef.current = selected;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const star = keyName(e) === "*";
-      if ((e.metaKey || e.altKey) && !star) return;
+      if (e.metaKey || e.altKey) return;
       // Function keys and Ctrl+G work from anywhere, like the real tools' global shortcuts; other keys belong to the text box.
       const fKey = /^F([1-9]|1[0-2])$/.test(e.key) || (e.ctrlKey && e.key.toLowerCase() === "g");
       if (isTyping(e.target) && !fKey) return;
@@ -122,8 +117,6 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
         setHelpOpen((o) => !o);
       } else if (key === "Escape") {
         setHelpOpen(false);
-      } else if (key.length === 1) {
-        dispatch({ type: "strayKey", key });
       }
     };
     window.addEventListener("keydown", onKey);

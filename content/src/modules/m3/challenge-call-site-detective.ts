@@ -51,11 +51,11 @@ export const callSiteDetective: LessonInput = {
       free: true,
       gate: prototype("32-bit integer", ["32-bit integer", "32-bit integer", "32-bit integer"]),
       hints: [
-        "Which registers are written right before the call, and what does main do with RAX after it?",
-        "ECX, EDX and R8D are 32-bit halves. xor edx,edx sets EDX to 0. Right after the call, EAX is stored as a dword.",
-        "Three 32-bit integers in, a 32-bit integer out: int f(int, int, int).",
+        "Which registers are written right before the call, and what does main do with `RAX` after it?",
+        "`ECX`, `EDX` and `R8D` are 32-bit halves. `xor edx,edx` sets `EDX` to 0. Right after the call, `EAX` is stored as a dword.",
+        "Three 32-bit integers in, a 32-bit integer out: `int f(int, int, int)`.",
       ],
-      success: "int f(int, int, int). xor edx,edx is just the cheapest way to pass 0.",
+      success: "`int f(int, int, int)`. `xor edx,edx` is just the cheapest way to pass 0.",
     },
     {
       section: "beat",
@@ -65,11 +65,11 @@ export const callSiteDetective: LessonInput = {
       free: true,
       gate: prototype("void", ["pointer", "8-bit integer", "32-bit integer"], { 2: ["64-bit integer"] }),
       hints: [
-        "Does anything use RAX after the call?",
-        "lea computes an address, so RCX is a pointer. DL is 8 bits. Nothing reads EAX afterwards.",
-        "void f(char *, char, n) where n is a 32-bit or 64-bit integer: lea rcx, mov dl,41, mov r8d,F.",
+        "Does anything use `RAX` after the call?",
+        "`lea` computes an address, so `RCX` is a pointer. `DL` is 8 bits. Nothing reads `EAX` afterwards.",
+        "`void f(char *, char, n)` where n is a 32-bit or 64-bit integer: `lea rcx`, `mov dl,41`, `mov r8d,F`.",
       ],
-      success: "void f(char *, char, size). 41 is 'A', and the pointer is a buffer on main's stack.",
+      success: "`void f(char *, char, size)`. 41 is 'A', and the pointer is a buffer on main's stack.",
     },
     {
       section: "beat",
@@ -80,10 +80,10 @@ export const callSiteDetective: LessonInput = {
       gate: prototype("double", ["double", "double", "double"]),
       hints: [
         "Which instruction loads each XMM register before the call?",
-        "movsd means double. cvtsi2sd converts an int into a double, so XMM0 is a double too.",
-        "double f(double, double, double): XMM0, XMM1 and XMM2 in, XMM0 stored with movsd after.",
+        "`movsd` means double. `cvtsi2sd` converts an int into a double, so `XMM0` is a double too.",
+        "`double f(double, double, double)`: `XMM0`, `XMM1` and `XMM2` in, `XMM0` stored with `movsd` after.",
       ],
-      success: "double f(double, double, double). main passed an int, but cvtsi2sd shows the function wanted a double.",
+      success: "`double f(double, double, double)`. main passed an int, but `cvtsi2sd` shows the function wanted a double.",
     },
     {
       section: "beat",
@@ -94,10 +94,10 @@ export const callSiteDetective: LessonInput = {
       gate: prototype("64-bit integer", ["32-bit integer", "64-bit integer", "32-bit integer", "32-bit integer", "32-bit integer", "64-bit integer"]),
       hints: [
         "Count the stack slots above the shadow space.",
-        "Compare the size of the stores at [rsp+20] (dword) and [rsp+28] (qword). RDX gets all 64 bits.",
-        "long long f(int, long long, int, int, int, long long). After the call, all of RAX is stored.",
+        "Compare the size of the stores at `[rsp+20]` (dword) and `[rsp+28]` (qword). `RDX` gets all 64 bits.",
+        "`long long f(int, long long, int, int, int, long long)`. After the call, all of `RAX` is stored.",
       ],
-      success: "long long f(int, long long, int, int, int, long long). Arguments 5 and 6 sat at [rsp+20] and [rsp+28].",
+      success: "`long long f(int, long long, int, int, int, long long)`. Arguments 5 and 6 sat at `[rsp+20]` and `[rsp+28]`.",
     },
     {
       section: "beat",
@@ -106,8 +106,8 @@ export const callSiteDetective: LessonInput = {
       say: "The fifth call goes to calls2." + short("lerp") + ".",
       free: true,
       gate: prototype("float", ["float", "float", "float"]),
-      hints: ["ss or sd?", "movss means float, both before the call and when main stores XMM0 after it.", "float f(float, float, float)."],
-      success: "float f(float, float, float).",
+      hints: ["ss or sd?", "`movss` means float, both before the call and when main stores `XMM0` after it.", "`float f(float, float, float)`."],
+      success: "`float f(float, float, float)`.",
     },
     {
       section: "beat",
@@ -118,10 +118,10 @@ export const callSiteDetective: LessonInput = {
       gate: prototype("32-bit integer", ["pointer", "32-bit integer", "pointer"]),
       hints: [
         "Two of the arguments are addresses. Where do they point?",
-        "lea rcx,[rsp+60] points at main's stack, where it stored four string pointers. R8 points at the string \"asm\". EDX is 4.",
-        "int f(char **, int, char *).",
+        "`lea rcx,`[rsp+60]`` points at main's stack, where it stored four string pointers. `R8` points at the string \"asm\". `EDX` is 4.",
+        "`int f(char **, int, char *)`.",
       ],
-      success: "int f(const char **, int, const char *): an array of four strings, its length, and a string to compare against.",
+      success: "`int f(const char **, int, const char *)`: an array of four strings, its length, and a string to compare against.",
     },
     {
       section: "beat",
@@ -133,13 +133,13 @@ export const callSiteDetective: LessonInput = {
         type: "choose",
         correct: "stack",
         options: [
-          { id: "rbx", label: "In RBX, because it's nonvolatile", feedback: "That's what Lesson 3.4's release build did. Look at this debug build: what does it compare against EAX each time round?" },
-          { id: "stack", label: "At [rsp+24] in its own stack frame, which strcmp doesn't touch" },
-          { id: "rcx", label: "In RCX, because it's the first argument", feedback: "RCX is volatile, and here it carries the word to strcmp." },
+          { id: "rbx", label: "In `RBX`, because it's nonvolatile", feedback: "That's what Lesson 3.4's release build did. Look at this debug build: what does it compare against `EAX` each time round?" },
+          { id: "stack", label: "At `[rsp+24]` in its own stack frame, which strcmp doesn't touch" },
+          { id: "rcx", label: "In `RCX`, because it's the first argument", feedback: "`RCX` is volatile, and here it carries the word to strcmp." },
         ],
       },
-      hints: ["strcmp may destroy volatile registers.", "Look for the dword the loop increments and compares.", "[rsp+24]: set to 0, incremented, and compared with n. It's in the function's own frame, above strcmp's shadow space."],
-      success: "[rsp+24]. strcmp only uses volatile registers, its own frame, and the shadow space below count_except's locals.",
+      hints: ["strcmp may destroy volatile registers.", "Look for the dword the loop increments and compares.", "`[rsp+24]`: set to 0, incremented, and compared with n. It's in the function's own frame, above strcmp's shadow space."],
+      success: "`[rsp+24]`. strcmp only uses volatile registers, its own frame, and the shadow space below count_except's locals.",
     },
   ],
   debrief: [

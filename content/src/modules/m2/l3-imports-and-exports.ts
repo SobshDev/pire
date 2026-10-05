@@ -38,7 +38,7 @@ export const importsAndExports: LessonInput = {
       kind: "Choose",
       title: "The puzzle",
       say:
-        "Back in x64dbg, paused in main. Calls to your own functions looked like call vault.0000000140001000. Calls to puts look different: call qword ptr ds:[<&puts>], with brackets. What do the brackets mean?",
+        "Back in x64dbg, paused in main. Calls to your own functions looked like call vault.`0000000140001000`. Calls to puts look different: `call qword ptr ds:[<&puts>]`, with brackets. What do the brackets mean?",
       setup: { banner: "x64dbg, paused on main's call to puts" },
       spotlight: "disassembly",
       pulse: ["disasm:" + vault["main.puts"]],
@@ -103,7 +103,7 @@ export const importsAndExports: LessonInput = {
       title: "Follow the RVA",
       say:
         "Follow it. Turn RVA 0x" + hx(puts.hintName) + " into a file offset with the converter on the right, then jump there with Ctrl+G.",
-      action: "Converter, then Ctrl+G",
+      action: "Converter, then `Ctrl+G`",
       gate: {
         type: "command",
         surface: "goto",

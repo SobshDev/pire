@@ -65,12 +65,6 @@ describe("lesson engine", () => {
     expect(s.lesson.mistakes).toBe(0);
   });
 
-  it("says which key a key step wants when another key is pressed", () => {
-    const s = run([{ type: "strayKey", key: "8" }], at(8));
-    expect(s.lesson.feedback?.text).toBe("That was 8. This step needs *.");
-    expect(s.lesson.mistakes).toBe(0);
-  });
-
   it("does not run the program from a step that asks for something else", () => {
     const start = at(1);
     const s = run([key("F8")], start);

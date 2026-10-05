@@ -95,7 +95,7 @@ export const threeKindsOfAddress: LessonInput = {
       kind: "Look",
       title: "Why disk and memory differ",
       say:
-        "On disk, sections are packed close together, each aligned to 0x200 bytes (FileAlignment). In memory, Windows starts each section on its own 0x1000-byte page (SectionAlignment) so it can mark code as executable and data as writable. The gaps are different, so file offsets don't match RVAs.",
+        "On disk, sections are packed close together, each aligned to `0x200` bytes (FileAlignment). In memory, Windows starts each section on its own `0x1000`-byte page (SectionAlignment) so it can mark code as executable and data as writable. The gaps are different, so file offsets don't match RVAs.",
       setup: { tool: "hex", banner: "Back in the hex viewer" },
       diagram: "alignment",
       gate: { type: "continue" },
@@ -186,7 +186,7 @@ export const threeKindsOfAddress: LessonInput = {
         correct: "low",
         options: [
           { id: "low", label: "The last four hex digits" },
-          { id: "high", label: "The first four hex digits", feedback: "Both start with 00007FF, but the next digits differ. Look at the end." },
+          { id: "high", label: "The first four hex digits", feedback: "Both start with `00007FF`, but the next digits differ. Look at the end." },
           { id: "none", label: "Nothing", feedback: "Look at the end of each address." },
         ],
       },
@@ -198,7 +198,7 @@ export const threeKindsOfAddress: LessonInput = {
       kind: "Choose",
       title: "How to tell if ASLR is on",
       say:
-        "The DllCharacteristics field in the optional header has a flag called DYNAMIC_BASE, 0x40. If it's set, Windows randomizes the image. The field is selected in vault-aslr.exe; switch files with the tabs to compare. Which file has ASLR on?",
+        "The DllCharacteristics field in the optional header has a flag called DYNAMIC_BASE, `0x40`. If it's set, Windows randomizes the image. The field is selected in vault-aslr.exe; switch files with the tabs to compare. Which file has ASLR on?",
       setup: { hexSelect: [dllChars.at, 2] },
       reveal: ["opt.DllCharacteristics"],
       gate: {
@@ -256,14 +256,14 @@ export const threeKindsOfAddress: LessonInput = {
       section: "checkpoint",
       kind: "Choose",
       title: "Telling a colleague",
-      say: "You found an interesting function at 0x7FF6A1C41530 in vault-aslr.exe and want to tell a colleague where it is. What do you write?",
+      say: "You found an interesting function at `0x7FF6A1C41530` in vault-aslr.exe and want to tell a colleague where it is. What do you write?",
       gate: {
         type: "choose",
         correct: "rva",
         options: [
-          { id: "va", label: "0x7FF6A1C41530", feedback: "Their ASLR base will be different, so this VA means nothing on their machine." },
-          { id: "rva", label: "RVA 0x1530, or vault-aslr.exe+1530" },
-          { id: "off", label: "File offset 0x7FF6A1C41530", feedback: "That's a VA, and much bigger than the file." },
+          { id: "va", label: "`0x7FF6A1C41530`", feedback: "Their ASLR base will be different, so this VA means nothing on their machine." },
+          { id: "rva", label: "RVA `0x1530`, or vault-aslr.exe+1530" },
+          { id: "off", label: "File offset `0x7FF6A1C41530`", feedback: "That's a VA, and much bigger than the file." },
         ],
       },
     },
@@ -276,11 +276,11 @@ export const threeKindsOfAddress: LessonInput = {
         type: "choose",
         correct: "ptr",
         options: [
-          { id: "rip", label: "mov rdx, qword ptr [rip+2F35]", feedback: "RIP-relative addressing is a distance from the instruction. Move both and the distance stays the same." },
+          { id: "rip", label: "`mov rdx`, qword ptr [rip+2F35]", feedback: "`RIP`-relative addressing is a distance from the instruction. Move both and the distance stays the same." },
           { id: "ptr", label: "An 8-byte pointer to a string, stored in .data" },
         ],
       },
-      success: "The pointer holds a full address, so it changes when the image moves. The RIP-relative instruction only holds a distance.",
+      success: "The pointer holds a full address, so it changes when the image moves. The `RIP`-relative instruction only holds a distance.",
     },
   ],
   tryIt: [

@@ -67,11 +67,11 @@ export const doubleClickToMain: LessonInput = {
         type: "choose",
         correct: "no",
         options: [
-          { id: "no", label: "No. RIP is still in ntdll, and the entry point hasn't run." },
+          { id: "no", label: "No. `RIP` is still in ntdll, and the entry point hasn't run." },
           { id: "yes", label: "Yes, the start of main.", feedback: "Look at the status bar and the title: the module is ntdll.dll. vault.exe's entry point is still ahead." },
         ],
       },
-      success: "None of it. Everything so far was Windows. That's why Lesson 1.5 pressed F9 once to reach the entry point.",
+      success: "None of it. Everything so far was Windows. That's why Lesson 1.5 pressed `F9` once to reach the entry point.",
     },
     {
       section: "beat",

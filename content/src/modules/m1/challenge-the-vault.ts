@@ -29,7 +29,7 @@ export const theVault: LessonInput = {
       hints: [
         "No PDB. Which two routes did Lesson 1.5 teach?",
         "The program prints Vault v2 - code: . Search for string references.",
-        "Right-click the disassembly, Search for, Current Module, String references. Double-click the prompt, find the first line after the int3 padding above it, press F2, then F9.",
+        "Right-click the disassembly, Search for, Current Module, String references. Double-click the prompt, find the first line after the `int3` padding above it, press `F2`, then `F9`.",
       ],
       success: "Found main. Note the address: it isn't where vault.exe kept it.",
     },
@@ -42,7 +42,7 @@ export const theVault: LessonInput = {
       hints: [
         "main calls a few functions. Which one isn't a DLL import?",
         "Look for the call whose result is tested right after it.",
-        "It's the unnamed call just before test eax,eax. Click it, press F4, then F7.",
+        "It's the unnamed call just before `test eax,eax`. Click it, press `F4`, then `F7`.",
       ],
       success: "That's the check. Step into it if you stopped on the call: the next goals happen inside.",
     },
@@ -52,7 +52,7 @@ export const theVault: LessonInput = {
       title: "Read the input",
       say: "Show the code you typed, letmein, in the dump.",
       gate: { type: "goal", check: { kind: "dumpShows", text: "letmein" } },
-      hints: ["Where does the first argument arrive?", "Right-click RCX at the function's first line.", "Right-click RCX, then Follow in Dump."],
+      hints: ["Where does the first argument arrive?", "Right-click `RCX` at the function's first line.", "Right-click `RCX`, then Follow in Dump."],
       success: "There's your input, on main's stack.",
     },
     {
@@ -63,8 +63,8 @@ export const theVault: LessonInput = {
       gate: { type: "goal", check: { kind: "dumpShows", text: "pirate42" } },
       hints: [
         "The secret is passed to strcmp.",
-        "Look at RDX just before the call to strcmp.",
-        "Step to the call to strcmp, then right-click RDX and choose Follow in Dump.",
+        "Look at `RDX` just before the call to strcmp.",
+        "Step to the call to strcmp, then right-click `RDX` and choose Follow in Dump.",
       ],
       success: "Found it in plain text.",
     },
@@ -84,11 +84,11 @@ export const theVault: LessonInput = {
       say: "The check counts your tries in a global. Use a hardware write breakpoint to stop when it changes.",
       gate: { type: "goal", check: { kind: "hwHit", address: vault2.g_tries } },
       hints: [
-        "Find a global that changes when you guess. Ctrl+F2 restarts if you've already passed it.",
+        "Find a global that changes when you guess. `Ctrl+F2` restarts if you've already passed it.",
         "Look in the check function for an instruction that writes to a fixed address, not the stack.",
-        "Ctrl+G in the dump with the address from mov dword ptr ds:[...],eax, then right-click its first byte: Breakpoint, Hardware, Write, Dword. Restart with Ctrl+F2 and press F9 until it fires.",
+        "`Ctrl+G` in the dump with the address from `mov dword ptr ds:[...],eax`, then right-click its first byte: Breakpoint, Hardware, Write, Dword. Restart with `Ctrl+F2` and press `F9` until it fires.",
       ],
-      success: "Caught the write. The instruction above RIP is the one that changed it.",
+      success: "Caught the write. The instruction above `RIP` is the one that changed it.",
     },
     {
       section: "beat",
@@ -112,8 +112,8 @@ export const theVault: LessonInput = {
       say: "This run types pirate42. Run it until it's about to show the message box, stopping on MessageBoxA first.",
       setup: { recording: RIGHT, at: "start", banner: "New run: this time the code is pirate42" },
       gate: { type: "goal", check: { kind: "pausedAt", address: vault2.MessageBoxA, recording: RIGHT } },
-      hints: ["Which API shows a message box?", "Use the command bar.", "Type bp MessageBoxA in the command bar, then press F9 until you stop inside it."],
-      success: "RDX holds You're in. The vault is open.",
+      hints: ["Which API shows a message box?", "Use the command bar.", "Type bp MessageBoxA in the command bar, then press `F9` until you stop inside it."],
+      success: "`RDX` holds You're in. The vault is open.",
     },
   ],
   debrief: [

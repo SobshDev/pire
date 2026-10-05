@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState, type ReactNode } from "react";
 import type { LessonState, PlayerEvent } from "../engine/lesson";
 import { cx, Keycap } from "../ui/bits";
+import { plain, Rich } from "../ui/Rich";
 import { Diagram } from "./Diagrams";
 
 interface GuideProps {
@@ -60,12 +61,20 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
           >
             {state.banner && (
               <p className="self-start rounded-full border border-amber-dim bg-[#1C160C] px-3 py-1 font-mono text-[11px] text-amber" data-testid="banner">
-                {state.banner}
+                <Rich text={state.banner} />
               </p>
             )}
             <h2 className="text-lg/6 font-semibold text-fg">{step.title}</h2>
-            <p className="text-[15px]/5.75 whitespace-pre-line text-fg">{step.say}</p>
-            {step.action && state.phase === "asking" && <ActionRow>{step.action}</ActionRow>}
+            <p className="text-[15px]/6.5 whitespace-pre-line text-fg">
+              <Rich text={step.say} />
+            </p>
+            {step.action && state.phase === "asking" && (
+              <ActionRow>
+                <span>
+                  <Rich text={step.action} />
+                </span>
+              </ActionRow>
+            )}
             {(step.free || step.gate.type === "goal") && state.phase === "asking" && (
               <p className="self-start rounded-sm bg-raised px-2 py-1 font-mono text-[10px] tracking-[0.08em] text-muted uppercase">
                 Free play · every key works
@@ -116,13 +125,15 @@ function ChallengeGuide({ lesson, state, dispatch }: Omit<GuideProps, "sourceOpe
           <span className="text-amber" data-testid="guide-kicker">Challenge · no guide</span>
           <span className="text-muted">{Math.min(state.stepIndex + 1, lesson.steps.length) + " / " + lesson.steps.length}</span>
         </div>
-        <p className="mt-3 text-sm/5.5 text-muted">{lesson.mission}</p>
+        <p className="mt-3 text-sm/6 text-muted">
+          <Rich text={lesson.mission} />
+        </p>
       </div>
 
       <div className="pane-scroll min-h-0 grow overflow-y-auto px-5 pt-4 pb-6">
         {state.banner && (
           <p className="mb-3 inline-block rounded-full border border-amber-dim bg-[#1C160C] px-3 py-1 font-mono text-[11px] text-amber" data-testid="banner">
-            {state.banner}
+            <Rich text={state.banner} />
           </p>
         )}
         <ol className="flex flex-col gap-1.5" aria-label="Goals">
@@ -152,13 +163,15 @@ function ChallengeGuide({ lesson, state, dispatch }: Omit<GuideProps, "sourceOpe
                 </div>
                 {current && (
                   <div className="mt-2.5 flex flex-col gap-3 pl-7">
-                    <p className="text-[14px]/5.5 whitespace-pre-line text-fg">{s.say}</p>
+                    <p className="text-[14px]/6 whitespace-pre-line text-fg">
+                      <Rich text={s.say} />
+                    </p>
                     <GateUI step={s} state={state} dispatch={dispatch} />
                     {/* Hints show in the list below, so the feedback box only carries answers and nudges. */}
                     {(state.phase === "success" || state.feedback?.tone !== "hint") && <FeedbackBox state={state} step={s} dispatch={dispatch} />}
                     {revealed.map((h, n) => (
                       <Box key={h} tone="hint" title={["Nudge", "Pointer", "Answer"][n] ?? "Hint"}>
-                        {h}
+                        <Rich text={h} />
                       </Box>
                     ))}
                   </div>
@@ -249,7 +262,9 @@ function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dis
                 )}
               >
                 <span className={cx("font-mono text-xs/5", right ? "text-ok" : "text-amber")}>{String.fromCharCode(65 + i)}</span>
-                {o.label}
+                <span>
+                  <Rich text={o.label} />
+                </span>
               </button>
             );
           })}
@@ -265,8 +280,10 @@ function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dis
             <p key={done.prompt} className="flex gap-2 text-[13px]/5 text-muted">
               <span className="text-ok">✓</span>
               <span>
-                {done.prompt + " "}
-                <span className="text-fg">{done.options.find((o) => o.id === done.correct)?.label}</span>
+                <Rich text={done.prompt + " "} />
+                <span className="text-fg">
+                  <Rich text={done.options.find((o) => o.id === done.correct)?.label ?? ""} />
+                </span>
               </span>
             </p>
           ))}
@@ -275,7 +292,9 @@ function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dis
               <p className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">
                 {"Question " + (state.answered + 1) + " of " + gate.questions.length}
               </p>
-              <p className="text-sm/5.5 text-fg" data-testid="quiz-prompt">{q.prompt}</p>
+              <p className="text-sm/6 text-fg" data-testid="quiz-prompt">
+                <Rich text={q.prompt} />
+              </p>
               <div className="flex flex-col gap-2">
                 {q.options.map((o, i) => (
                   <button
@@ -288,7 +307,9 @@ function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dis
                     )}
                   >
                     <span className="font-mono text-xs/5 text-amber">{String.fromCharCode(65 + i)}</span>
-                    {o.label}
+                    <span>
+                      <Rich text={o.label} />
+                    </span>
                   </button>
                 ))}
               </div>
@@ -368,10 +389,12 @@ function FillCard({ gate, state, dispatch }: { gate: Extract<Step["gate"], { typ
         );
         return (
           <label key={f.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
-            <span className="min-w-28 flex-1 text-muted">{f.label}</span>
+            <span className="min-w-28 flex-1 text-muted">
+              <Rich text={f.label} />
+            </span>
             <span className="flex min-w-36 flex-[2] items-center gap-2">
             {f.format === "choice" ? (
-              <select aria-label={f.label} disabled={done} value={value} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))} className={cls}>
+              <select aria-label={plain(f.label)} disabled={done} value={value} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))} className={cls}>
                 <option value="">Choose</option>
                 {f.options.map((o) => (
                   <option key={o} value={o}>
@@ -381,7 +404,7 @@ function FillCard({ gate, state, dispatch }: { gate: Extract<Step["gate"], { typ
               </select>
             ) : (
               <input
-                aria-label={f.label}
+                aria-label={plain(f.label)}
                 disabled={done}
                 value={value}
                 placeholder={f.placeholder}
@@ -466,7 +489,9 @@ function FeedbackBox({ state, step, dispatch }: { state: LessonState; step: Step
   if (state.phase === "success") {
     return (
       <Box tone="ok" title="Correct">
-        {step.success}
+        <span>
+          <Rich text={step.success ?? ""} />
+        </span>
         <button type="button" onClick={() => dispatch({ type: "continue" })} className={cx(primary, "mt-3")}>
           Continue
           <Keycap small>↵</Keycap>
@@ -478,7 +503,9 @@ function FeedbackBox({ state, step, dispatch }: { state: LessonState; step: Step
   const { tone, text } = state.feedback;
   return (
     <Box key={text} tone={tone} title={tone === "wrong" ? "Not quite" : tone === "hint" ? "Hint" : "Heads up"}>
-      {text}
+      <span>
+        <Rich text={text} />
+      </span>
     </Box>
   );
 }

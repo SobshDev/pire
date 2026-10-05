@@ -32,11 +32,11 @@ export const usingAPeViewer: LessonInput = {
       section: "beat",
       kind: "Click",
       title: "DOS header",
-      say: "You're on DOS Hdr. Find e_lfanew and click its row. Does it match the 0xF8 you read by hand?",
+      say: "You're on DOS Hdr. Find e_lfanew and click its row. Does it match the `0xF8` you read by hand?",
       spotlight: "pedetail",
       pulse: ["pe:field:dos.e_lfanew"],
       gate: { type: "click", accept: ["pe:field:dos.e_lfanew"], fallback: "It's the last row of the DOS header." },
-      success: "0xF8, at offset 0x3C. The hex pane underneath highlights the same 4 bytes you flipped in Lesson 2.1.",
+      success: "`0xF8`, at offset `0x3C`. The hex pane underneath highlights the same 4 bytes you flipped in Lesson 2.1.",
     },
     {
       section: "beat",
@@ -53,7 +53,7 @@ export const usingAPeViewer: LessonInput = {
       },
       hints: ["The tabs above the table switch between headers.", "Machine and NumberOfSections are in File Hdr; the other three are near the top of Optional Hdr."],
       success:
-        "0x8664 (x64), 4 sections, 0x20B (64-bit), entry point 0x1200, ImageBase 0x140000000. The viewer shows the entry point as an RVA, just as you worked out in Lesson 2.2.",
+        "`0x8664` (x64), 4 sections, `0x20B` (64-bit), entry point `0x1200`, ImageBase `0x140000000`. The viewer shows the entry point as an RVA, just as you worked out in Lesson 2.2.",
     },
     {
       section: "beat",
@@ -111,15 +111,15 @@ export const usingAPeViewer: LessonInput = {
       kind: "Choose",
       title: "Spot the mismatch",
       say:
-        "Someone else filled in this passport for vault.exe: Machine 0x8664, NumberOfSections 5, Magic 0x20B, AddressOfEntryPoint 0x1200, ImageBase 0x140000000. One value doesn't match the file. Which?",
+        "Someone else filled in this passport for vault.exe: Machine `0x8664`, NumberOfSections 5, Magic `0x20B`, AddressOfEntryPoint `0x1200`, ImageBase `0x140000000`. One value doesn't match the file. Which?",
       gate: {
         type: "choose",
         correct: "sections",
         options: [
-          { id: "machine", label: "Machine 0x8664", feedback: "Click Machine in File Hdr: 0x8664, x64. That one's right." },
+          { id: "machine", label: "Machine `0x8664`", feedback: "Click Machine in File Hdr: `0x8664`, x64. That one's right." },
           { id: "sections", label: "NumberOfSections 5" },
-          { id: "entry", label: "AddressOfEntryPoint 0x1200", feedback: "Check Optional Hdr: 0x1200 is right." },
-          { id: "base", label: "ImageBase 0x140000000", feedback: "That's the usual 64-bit ImageBase, and vault.exe's." },
+          { id: "entry", label: "AddressOfEntryPoint `0x1200`", feedback: "Check Optional Hdr: `0x1200` is right." },
+          { id: "base", label: "ImageBase `0x140000000`", feedback: "That's the usual 64-bit ImageBase, and vault.exe's." },
         ],
       },
       hints: ["Count the rows in Section Hdrs."],
@@ -141,7 +141,7 @@ export const usingAPeViewer: LessonInput = {
           { id: "entry", label: "Entry point RVA", format: "hex", answer: hx(pe.entry), placeholder: "hex" },
         ],
       },
-      hints: ["DllCharacteristics lists DYNAMIC_BASE when ASLR is on.", "vault.exe's DllCharacteristics is 0x8120: no DYNAMIC_BASE."],
+      hints: ["DllCharacteristics lists DYNAMIC_BASE when ASLR is on.", "vault.exe's DllCharacteristics is `0x8120`: no DYNAMIC_BASE."],
     },
   ],
   tryIt: [

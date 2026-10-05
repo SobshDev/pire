@@ -89,7 +89,7 @@ export const passportControl: LessonInput = {
       free: true,
       gate: passport(hx(B.entry), B.sections.length, "32-bit", "Console", "No"),
       hints: passportHints("traveler-b", "32-bit (Machine 0x14C, Magic 0x10B), console (Subsystem 3), ASLR no (no DYNAMIC_BASE), entry point 0x" + hx(B.entry) + ", " + B.sections.length + " sections."),
-      success: "traveler-b checked. Its Magic is 0x10B: a PE32 file, with a smaller optional header than the 64-bit ones.",
+      success: "traveler-b checked. Its Magic is `0x10B`: a PE32 file, with a smaller optional header than the 64-bit ones.",
     },
     {
       section: "beat",
@@ -115,7 +115,7 @@ export const passportControl: LessonInput = {
         wrong: [{ match: hx(0x140000000n + BigInt(B.entry)), feedback: "That uses the 64-bit ImageBase. Check traveler-b's own ImageBase." }],
         fallback: "VA = ImageBase + RVA, using traveler-b's ImageBase.",
       },
-      hints: ["VA = ImageBase + RVA.", "This one's ImageBase is not 0x140000000. Look in its Optional Hdr.", "0x" + hx(B.imageBase) + " + 0x" + hx(B.entry) + " = 0x" + hx(B.imageBase + BigInt(B.entry)) + "."],
+      hints: ["VA = ImageBase + RVA.", "This one's ImageBase is not `0x140000000`. Look in its Optional Hdr.", "0x" + hx(B.imageBase) + " + 0x" + hx(B.entry) + " = 0x" + hx(B.imageBase + BigInt(B.entry)) + "."],
       success: "0x" + hx(B.imageBase + BigInt(B.entry)) + ". 0x400000 is the classic ImageBase for 32-bit programs.",
     },
     {
