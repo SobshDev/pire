@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{Request, State},
+    extract::{FromRef, Request, State},
     http::{Method, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
@@ -8,6 +8,7 @@ use axum::{
 };
 use serde_json::json;
 use sqlx::PgPool;
+use std::sync::Arc;
 use tower_http::{
     compression::CompressionLayer,
     services::{ServeDir, ServeFile},
@@ -20,7 +21,7 @@ use tower_sessions::{
 use tower_sessions_sqlx_store::PostgresStore;
 use utoipa::OpenApi;
 
-use crate::{auth, config::Config, error::ApiError, openapi::ApiDoc, progress};
+use crate::{auth, config::Config, error::ApiError, openapi::ApiDoc, progress, tutor::{self, Tutor}};
 
 /// Header every state-changing API request must carry. Browsers can't add custom
 /// headers to cross-site requests without a CORS preflight, which this API never
@@ -28,6 +29,20 @@ use crate::{auth, config::Config, error::ApiError, openapi::ApiDoc, progress};
 pub const CSRF_HEADER: &str = "x-pire-request";
 
 pub const SESSION_COOKIE: &str = "pire_session";
+
+/// Shared by every handler. Handlers that only need the database take State<PgPool>.
+#[derive(Clone)]
+pub struct AppState {
+    pub pool: PgPool,
+    /// None when the tutor isn't configured.
+    pub tutor: Option<Arc<Tutor>>,
+}
+
+impl FromRef<AppState> for PgPool {
+    fn from_ref(state: &AppState) -> PgPool {
+        state.pool.clone()
+    }
+}
 
 /// Build the full application: API routes, sessions, and (optionally) the frontend.
 pub async fn build(pool: PgPool, config: &Config) -> Result<Router, sqlx::Error> {
@@ -41,6 +56,8 @@ pub async fn build(pool: PgPool, config: &Config) -> Result<Router, sqlx::Error>
         .with_secure(config.cookie_secure)
         .with_expiry(Expiry::OnInactivity(Duration::days(30)));
 
+    let state = AppState { pool, tutor: config.tutor.as_ref().map(|c| Arc::new(Tutor::new(c))) };
+
     let api = Router::new()
         .route("/health", get(health))
         .route("/openapi.json", get(openapi_json))
@@ -50,10 +67,13 @@ pub async fn build(pool: PgPool, config: &Config) -> Result<Router, sqlx::Error>
         .route("/auth/me", get(auth::me))
         .route("/progress", get(progress::list))
         .route("/progress/{lesson_id}", put(progress::save))
+        .route("/tutor/status", get(tutor::status))
+        .route("/tutor/{lesson_id}/messages", get(tutor::messages).delete(tutor::reset))
+        .route("/tutor/{lesson_id}/chat", post(tutor::chat))
         .fallback(|| async { ApiError::NotFound })
         .layer(middleware::from_fn(require_csrf_header))
         .layer(sessions)
-        .with_state(pool);
+        .with_state(state);
 
     let mut app = Router::new().nest("/api", api);
 

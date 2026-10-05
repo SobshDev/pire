@@ -27,6 +27,7 @@ impl Client {
             bind_addr: "127.0.0.1:0".parse().unwrap(),
             static_dir: None,
             cookie_secure: false,
+            tutor: None,
         };
         Self { app: app::build(pool, &config).await.unwrap(), cookie: None }
     }

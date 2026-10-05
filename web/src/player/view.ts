@@ -18,6 +18,8 @@ export interface View {
   highlights: ReadonlySet<string>;
   /** Targets pulsing to show where to act. */
   pulse: ReadonlySet<string>;
+  /** Targets the AI tutor is pointing at. */
+  tutor: ReadonlySet<string>;
   /** The target the learner clicked last, drawn as selected. */
   selected: string | null;
   /** True while a match checkpoint accepts drops. */
@@ -63,6 +65,7 @@ export function useTarget(id: string, pane: PaneId, base?: string) {
         base,
         view.highlights.has(id) && "relative z-10 shadow-[inset_0_0_0_1.5px_var(--color-amber)]",
         view.pulse.has(id) && "pulse-target",
+        view.tutor.has(id) && "tutor-point",
       ),
     },
   };

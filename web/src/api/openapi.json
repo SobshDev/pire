@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "pire API",
-    "description": "Accounts and lesson progress for pire.",
+    "description": "Accounts, lesson progress and the AI tutor for pire.",
     "license": {
       "name": ""
     },
@@ -241,6 +241,112 @@
           }
         }
       }
+    },
+    "/api/tutor/status": {
+      "get": {
+        "tags": [
+          "tutor"
+        ],
+        "summary": "Whether the tutor is configured on this server.",
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "Tutor availability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tutor/{lesson_id}/messages": {
+      "get": {
+        "tags": [
+          "tutor"
+        ],
+        "summary": "The learner's tutor chat for one lesson.",
+        "operationId": "messages",
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "description": "Lesson id, for example m1.l2",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The chat so far",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorMessages"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signed out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown lesson",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tutor"
+        ],
+        "summary": "Forget the learner's tutor chat for one lesson.",
+        "operationId": "reset",
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "description": "Lesson id, for example m1.l2",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Chat cleared"
+          },
+          "401": {
+            "description": "Signed out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -346,6 +452,32 @@
           }
         }
       },
+      "TutorMessages": {
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "The chat as AI SDK UI messages, ready for useChat."
+          }
+        }
+      },
+      "TutorStatus": {
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
       "User": {
         "type": "object",
         "required": [
@@ -381,6 +513,10 @@
     {
       "name": "progress",
       "description": "Lesson progress"
+    },
+    {
+      "name": "tutor",
+      "description": "The AI tutor. Its chat stream is POST /api/tutor/{lesson_id}/chat (AI SDK UI message stream)."
     }
   ]
 }

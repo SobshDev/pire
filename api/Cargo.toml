@@ -19,12 +19,16 @@ path = "src/bin/openapi.rs"
 argon2 = "0.6.0"
 axum = { version = "0.8", features = ["macros"] }
 dotenvy = "0.15.7"
+eventsource-stream = "0.2.3"
+futures-util = "0.3.34"
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "stream", "rustls"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "time", "json", "migrate", "macros"] }
 thiserror = "2.0.21"
 time = { version = "0.3.55", features = ["serde", "serde-well-known"] }
 tokio = { version = "1.53.2", features = ["full"] }
+tokio-stream = "0.1.19"
 tower-http = { version = "0.7.1", features = ["fs", "trace", "compression-gzip"] }
 tower-sessions = "0.14"
 tower-sessions-sqlx-store = { version = "0.15.0", features = ["postgres"] }

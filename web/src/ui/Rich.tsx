@@ -39,7 +39,7 @@ const isInstruction = (code: string) => MNEMONIC.test(code.split(" ")[0] ?? "");
 /** An instruction with operands gets its own line, like a fenced code block, so it never breaks mid-chip. */
 const isBlock = (code: string) => isInstruction(code) && code.includes(" ");
 
-function Code({ code }: { code: string }) {
+export function Code({ code }: { code: string }) {
   // Inline, unlike the toolbar Keycap, so the key reads as part of the sentence (and of accessible names).
   if (KEY.test(code)) {
     return <kbd className="rounded-sm border border-b-2 border-faint bg-raised px-1 py-px font-mono text-[0.8em] font-medium text-fg">{code}</kbd>;
@@ -86,5 +86,24 @@ function Operands({ text }: { text: string }) {
         );
       })}
     </>
+  );
+}
+
+/** A fenced code block: one instruction per line, colored like the disassembly. */
+export function CodeBlock({ code }: { code: string }) {
+  return (
+    <pre className="pane-scroll overflow-x-auto rounded-md border border-line bg-ink px-3 py-2 font-mono text-[12.5px]/5">
+      {code.split("\n").map((line, i) => {
+        const [mnemonic, ...rest] = line.trim().split(" ");
+        if (!mnemonic || !isInstruction(line.trim())) return <div key={i} className="text-fg">{line || " "}</div>;
+        return (
+          <div key={i}>
+            <span className={FLOW.test(mnemonic) ? "text-amber" : mnemonic === "int3" ? "text-muted" : "text-mnemonic"}>{mnemonic}</span>
+            {rest.length > 0 && " "}
+            {rest.length > 0 && <Operands text={rest.join(" ")} />}
+          </div>
+        );
+      })}
+    </pre>
   );
 }

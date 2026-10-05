@@ -7,6 +7,7 @@
     "build": "bun run --cwd web build",
     "test": "bun run --cwd web test",
     "e2e": "bun run --cwd web e2e",
+    "export:tutor": "bun run --cwd content export:tutor",
     "typecheck": "bun run --cwd content typecheck && bun run --cwd web typecheck"
   }
 }
