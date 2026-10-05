@@ -36,8 +36,8 @@ const FLOW = /^(?:call|ret|j[a-z]{1,3})$/;
 const chip = "rounded-[4px] border px-1 py-px font-mono text-[0.87em] [box-decoration-break:clone] [overflow-wrap:anywhere]";
 
 const isInstruction = (code: string) => MNEMONIC.test(code.split(" ")[0] ?? "");
-/** A long instruction would break mid-operand, so it gets its own line, like a one-line code block. */
-const isBlock = (code: string) => isInstruction(code) && code.length > 24;
+/** An instruction with operands gets its own line, like a fenced code block, so it never breaks mid-chip. */
+const isBlock = (code: string) => isInstruction(code) && code.includes(" ");
 
 function Code({ code }: { code: string }) {
   // Inline, unlike the toolbar Keycap, so the key reads as part of the sentence (and of accessible names).
@@ -51,9 +51,40 @@ function Code({ code }: { code: string }) {
     return (
       <code className={cx(chip, "border-line bg-raised", isBlock(code) && "my-1.5 block w-fit max-w-full px-2 py-1")}>
         <span className={FLOW.test(mnemonic) ? "text-amber" : mnemonic === "int3" ? "text-muted" : "text-mnemonic"}>{mnemonic}</span>
-        {rest.length > 0 && <span className="text-fg">{" " + rest.join(" ")}</span>}
+        {rest.length > 0 && " "}
+        {rest.length > 0 && <Operands text={rest.join(" ")} />}
       </code>
     );
   }
   return <code className={cx(chip, "border-line bg-raised text-mnemonic")}>{code}</code>;
+}
+
+const OPERAND_TOKEN = /(<[^>]*>|\b(?:byte|word|dword|qword|xmmword) ptr\b|\b[cdefgs]s:|0x[0-9A-Fa-f]+|[A-Za-z_][\w.]*|[0-9A-Fa-f]+|\.\.\.|\s+|.)/g;
+const SIZE_OR_SEGMENT = /^(?:(?:byte|word|dword|qword|xmmword) ptr|[cdefgs]s:)$/;
+const HEX = /^(?:0x[0-9A-Fa-f]+|[0-9A-F]+|\d[0-9A-Fa-f]*)$/;
+
+/** Operands colored like the chips: registers blue, numbers violet, size and segment muted, punctuation dim. */
+function Operands({ text }: { text: string }) {
+  return (
+    <>
+      {(text.match(OPERAND_TOKEN) ?? []).map((t, i) => {
+        const cls = REGISTER.test(t.toUpperCase()) && /^[a-z0-9]+$/i.test(t)
+          ? "text-[#9CCDF5]"
+          : HEX.test(t)
+            ? "text-[#CDB3F5]"
+            : SIZE_OR_SEGMENT.test(t) || t === "..."
+              ? "text-muted"
+              : t.startsWith("<")
+                ? "text-mnemonic"
+                : /^[\w.]/.test(t)
+                  ? "text-fg"
+                  : "text-comment";
+        return (
+          <span key={i} className={cls}>
+            {t}
+          </span>
+        );
+      })}
+    </>
+  );
 }
