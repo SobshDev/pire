@@ -1,6 +1,7 @@
 {
   "name": "@pire/content",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",

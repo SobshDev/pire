@@ -4,7 +4,7 @@ import { catalog, getLesson, type CatalogLesson } from "@pire/content";
 import { meQuery, progressQuery, useLogout } from "../api/queries";
 import type { LessonProgress } from "../api/client";
 import { savedMedal, type Medal } from "../engine/lesson";
-import { cx, Logo } from "../ui/bits";
+import { cx, GitHubMark, Logo, REPO_URL } from "../ui/bits";
 
 const MEDAL_STYLE: Record<Medal, string> = {
   gold: "bg-amber text-ink",
@@ -25,6 +25,15 @@ export function CatalogPage() {
         <Logo />
         <span className="text-[13px] text-muted">Learn reverse engineering on x64 Windows</span>
         <div className="grow" />
+        <a
+          href={REPO_URL + "/blob/main/CONTRIBUTING.md"}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1.5 text-xs text-fg hover:text-amber"
+        >
+          <GitHubMark className="size-3.5" />
+          Contribute
+        </a>
         {me ? (
           <>
             <span className="text-[13px] text-muted">{me.display_name}</span>
@@ -81,6 +90,32 @@ export function CatalogPage() {
             </section>
           ))}
         </div>
+
+        <footer className="mt-16 rounded-lg border border-amber-line bg-guide px-6 py-5">
+          <h2 className="text-sm font-medium text-fg">pire is open source</h2>
+          <p className="mt-1.5 text-[13px]/5 text-muted">
+            Lessons and tools are built in the open. Fix a typo, sharpen a hint, design the next module, or
+            improve the debugger. Beginners welcome.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs">
+            <a
+              href={REPO_URL + "/blob/main/CONTRIBUTING.md"}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-7 items-center gap-1.5 rounded-md bg-amber px-2.5 font-medium text-ink"
+            >
+              <GitHubMark className="size-3.5" />
+              How to contribute
+            </a>
+            <a href={REPO_URL + "/issues"} target="_blank" rel="noreferrer" className="text-fg hover:text-amber">
+              Open issues
+            </a>
+            <a href={REPO_URL} target="_blank" rel="noreferrer" className="text-fg hover:text-amber">
+              Source on GitHub
+            </a>
+            <span className="text-faint">Code MIT · Lessons CC BY-SA 4.0</span>
+          </div>
+        </footer>
       </main>
     </div>
   );

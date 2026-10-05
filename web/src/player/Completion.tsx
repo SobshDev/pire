@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { Lesson } from "@pire/content";
 import { motion } from "motion/react";
 import { medal, type LessonState } from "../engine/lesson";
-import { cx, Keycap } from "../ui/bits";
+import { cx, Keycap, lessonFeedbackUrl } from "../ui/bits";
 import { SourceCard } from "./Guide";
 
 const MEDALS = {
@@ -69,7 +69,7 @@ export function Completion({ lesson, state, onReplay }: { lesson: Lesson; state:
           ))}
         </ol>
 
-        <div className="mt-8 flex gap-3">
+        <div className="mt-8 flex items-center gap-3">
           <Link to="/" className="flex h-9 items-center rounded-md bg-amber px-4 text-sm font-medium text-ink">
             Back to the course
           </Link>
@@ -80,6 +80,14 @@ export function Completion({ lesson, state, onReplay }: { lesson: Lesson; state:
           >
             Replay lesson
           </button>
+          <a
+            href={lessonFeedbackUrl(lesson.id)}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto text-[13px] text-muted hover:text-amber"
+          >
+            Suggest a fix for this lesson ↗
+          </a>
         </div>
       </motion.div>
     </div>

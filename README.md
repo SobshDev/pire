@@ -5,6 +5,9 @@ debugger (x64dbg for Module 1), paused on a real program, and a guide checks eve
 
 Lesson designs live in [docs/lessons](docs/lessons). Modules 1 to 3 are playable, challenges included.
 
+pire is open source and built in the open. Contributions of every size are welcome, from fixing a
+typo in a lesson to designing a whole module: read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
 ## Layout
 
 | Path | What it is |
@@ -61,3 +64,17 @@ Migrations run when the app starts, so a deploy is just a rebuild.
 2. Add the snapshot to content/src/specimens and the lesson to content/src/modules, then register it in
    content/src/index.ts. The catalog marks it playable automatically.
 3. Add a playthrough to web/e2e.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks, and how lessons are reviewed. Everyone taking
+part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues privately as described in
+[SECURITY.md](SECURITY.md).
+
+## License
+
+The code is under the [MIT License](LICENSE). The lesson design docs in docs/lessons are under
+[Creative Commons Attribution-ShareAlike 4.0](docs/lessons/LICENSE).
+
+x64dbg, PE-bear, Ghidra, Windows, and MSVC are the property of their owners. pire recreates parts of
+their interfaces for teaching and isn't affiliated with or endorsed by them.

@@ -1,0 +1,26 @@
+name: Lesson or module idea
+description: Propose a new lesson, challenge, or module.
+labels: ["lesson-design"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should the learner be able to do afterwards?
+    validations:
+      required: true
+  - type: input
+    id: module
+    attributes:
+      label: Module
+      description: Which module it belongs to. See docs/lessons/README.md for the course map.
+  - type: textarea
+    id: specimen
+    attributes:
+      label: Specimen
+      description: The program the lesson would use, and what makes it a good example.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to write the design doc for this.

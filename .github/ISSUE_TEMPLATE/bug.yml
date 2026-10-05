@@ -1,0 +1,25 @@
+name: Bug report
+description: Something in the app doesn't work.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: The page or lesson, such as /learn/m2.l3.
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Firefox 131 on Windows 11
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or console errors
