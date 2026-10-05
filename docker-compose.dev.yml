@@ -1,0 +1,22 @@
+# Local development database only: docker compose -f docker-compose.dev.yml up -d
+# Postgres on 127.0.0.1:5433 with throwaway dev credentials (user/pass/db: pire), matching api/.env.example.
+# Never deploy this file; production uses docker-compose.yml, which requires POSTGRES_PASSWORD.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: pire
+      POSTGRES_PASSWORD: pire
+      POSTGRES_DB: pire
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pire-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pire -d pire"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pire-db:

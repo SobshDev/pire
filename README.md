@@ -148,7 +148,7 @@ You need [Bun](https://bun.sh), [Rust](https://rustup.rs), and Docker.
 
 ```sh
 bun install
-docker compose up -d db          # Postgres on localhost:5433
+docker compose -f docker-compose.dev.yml up -d   # dev Postgres on localhost:5433
 cp api/.env.example api/.env
 (cd api && cargo run)            # API on :8080, runs migrations on start
 bun run dev                      # Vite on :5173, proxies /api to :8080
@@ -184,7 +184,8 @@ The Dockerfile builds one image that serves the API at `/api` and the frontend e
 
 1. Create a Docker Compose service from this repository, branch `main`, compose path `./docker-compose.yml`.
 2. Set the environment:
-   - `POSTGRES_PASSWORD`: a URL-safe password (letters and digits), used by both containers.
+   - `POSTGRES_PASSWORD` (required): a long, random, URL-safe password (letters and digits), used by
+     both containers. The stack won't start without it.
    - `TUTOR_BASE_URL`, `TUTOR_API_KEY`, `TUTOR_MODEL`, `TUTOR_MAX_TOKENS`: optional, for the AI tutor.
 3. Add your domain for service `app` on port 8080, with HTTPS. Health checks hit `/api/health`.
 

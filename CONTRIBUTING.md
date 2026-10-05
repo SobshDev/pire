@@ -23,7 +23,7 @@ open an issue first so we can agree on the approach before you spend time on it.
 You need Bun, Rust, and Docker.
 
     bun install
-    docker compose up -d db                      # Postgres on localhost:5433
+    docker compose -f docker-compose.dev.yml up -d   # dev Postgres on localhost:5433
     cp api/.env.example api/.env
     (cd api && cargo run)                        # API on :8080, runs migrations on start
     bun run dev                                  # Vite on :5173, proxies /api to :8080

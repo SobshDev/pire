@@ -1,12 +1,14 @@
-# pire: the app (API + built frontend) and its Postgres.
-# Local dev runs only the database: docker compose up -d db (Postgres on localhost:5433).
-# On Dokploy, set POSTGRES_PASSWORD and the optional TUTOR_* variables, then add the domain to service "app" on port 8080.
+# pire in production: the app (API + built frontend) and its Postgres.
+# For local development use docker-compose.dev.yml instead.
+# On Dokploy, set POSTGRES_PASSWORD (required, long and random) and the optional TUTOR_* variables,
+# then add the domain to service "app" on port 8080.
+# The database is reachable only by the app over the compose network; it publishes no host port.
 services:
   app:
     build: .
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://pire:${POSTGRES_PASSWORD:-pire}@db:5432/pire
+      DATABASE_URL: postgres://pire:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a long random password}@db:5432/pire
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       TUTOR_BASE_URL: ${TUTOR_BASE_URL:-}
       TUTOR_API_KEY: ${TUTOR_API_KEY:-}
@@ -25,10 +27,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: pire
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pire}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a long random password}
       POSTGRES_DB: pire
-    ports:
-      - "127.0.0.1:5433:5432"
     volumes:
       - pire-db:/var/lib/postgresql/data
     healthcheck:
