@@ -78,4 +78,19 @@ export interface Recording {
   memory: MemoryRegion[];
   states: TraceState[];
   strings: StringRef[];
+  /** Log tab lines from process start to the first stop: loaded DLLs, the system breakpoint. */
+  log?: string[];
+  /** Memory Map tab rows. */
+  memoryMap?: MapRow[];
+  /** Call stack frames below the entry point (Windows code that called it), oldest last. */
+  baseFrames?: { slot: Hex; to: Hex; from: Hex }[];
+}
+
+export interface MapRow {
+  address: Hex;
+  size: Hex;
+  info: string;
+  content: string;
+  type: "IMG" | "PRV" | "MAP";
+  protection: string;
 }

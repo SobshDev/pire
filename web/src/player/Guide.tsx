@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState, type ReactNode } from "react";
 import type { LessonState, PlayerEvent } from "../engine/lesson";
 import { cx, Keycap } from "../ui/bits";
+import { Diagram } from "./Diagrams";
 
 interface GuideProps {
   lesson: Lesson;
@@ -71,6 +72,7 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
               </p>
             )}
             {step.figure && <Figure figure={step.figure} />}
+            {step.diagram && <Diagram id={step.diagram} />}
             <GateUI step={step} state={state} dispatch={dispatch} />
             <FeedbackBox state={state} step={step} dispatch={dispatch} />
             {step.hints.length > 0 && state.phase === "asking" && state.hintsShown < step.hints.length && (
@@ -329,9 +331,69 @@ function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dis
           ))}
         </div>
       );
+    case "fill":
+      return <FillCard key={state.stepIndex} gate={gate} state={state} dispatch={dispatch} />;
     default:
       return null;
   }
+}
+
+/** A card of answers checked together. Correct answers lock in green; wrong ones turn red. */
+function FillCard({ gate, state, dispatch }: { gate: Extract<Step["gate"], { type: "fill" }>; state: LessonState; dispatch(e: PlayerEvent): void }) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const answered = state.phase === "success";
+  return (
+    <form
+      className="flex flex-col gap-2 rounded-md border border-line bg-ink p-3"
+      data-testid="fill-card"
+      onSubmit={(e) => {
+        e.preventDefault();
+        dispatch({ type: "fill", values: { ...values, ...state.filled } });
+      }}
+    >
+      {gate.fields.map((f) => {
+        const done = answered || f.id in state.filled;
+        const bad = state.unfilled.includes(f.id);
+        const value = done ? (state.filled[f.id] ?? values[f.id] ?? f.answer) : (values[f.id] ?? "");
+        const cls = cx(
+          "h-8 min-w-0 grow rounded-sm border bg-panel px-2 font-mono text-[12px] text-fg outline-none focus:border-amber-dim disabled:opacity-90",
+          done ? "border-ok" : bad ? "border-bad" : "border-line",
+        );
+        return (
+          <label key={f.id} className="flex items-center gap-2 text-[13px]">
+            <span className="w-32 shrink-0 text-muted">{f.label}</span>
+            {f.format === "choice" ? (
+              <select aria-label={f.label} disabled={done} value={value} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))} className={cls}>
+                <option value="">Choose</option>
+                {f.options.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                aria-label={f.label}
+                disabled={done}
+                value={value}
+                placeholder={f.placeholder}
+                onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
+                spellCheck={false}
+                autoComplete="off"
+                className={cls}
+              />
+            )}
+            <span className={cx("w-3 text-xs", done ? "text-ok" : "text-bad")}>{done ? "✓" : bad ? "✕" : ""}</span>
+          </label>
+        );
+      })}
+      {!answered && (
+        <button type="submit" className={cx(primary, "mt-1")}>
+          Check
+        </button>
+      )}
+    </form>
+  );
 }
 
 const primary =

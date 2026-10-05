@@ -1,4 +1,4 @@
-import { getRecording, type Check, type Lesson, type Recording, type Setup, type Step } from "@pire/content";
+import { getRecording, type Check, type Lesson, type Recording, type Setup, type Step, type ToolId } from "@pire/content";
 import * as D from "./debugger";
 import type { Session, Tab } from "./debugger";
 
@@ -32,6 +32,10 @@ export interface LessonState {
   ordered: string[];
   /** Quiz gate: questions answered correctly so far. */
   answered: number;
+  /** Fill gate: answers already correct, by field id. */
+  filled: Record<string, string>;
+  /** Fill gate: fields the last check marked wrong. */
+  unfilled: string[];
   keys: string[];
   /** Scene change text from the current step's setup. */
   banner: string | null;
@@ -56,6 +60,8 @@ export type PlayerEvent =
   | { type: "command"; surface: "command" | "goto"; text: string }
   | { type: "menu"; target: string; item: string }
   | { type: "tab"; tab: Tab }
+  | { type: "select"; start: number; length: number }
+  | { type: "fill"; values: Record<string, string> }
   | { type: "closeGoto" };
 
 /** Keys that drive the debugger. Anything else is ignored. */
@@ -91,13 +97,56 @@ export function applySetup(session: Session | null, setup: Setup | undefined, fa
           log: session?.log ?? [],
           // A new run keeps the dump where the learner left it, like restarting in x64dbg.
           ...(session ? { dump: session.dump } : {}),
+          // The other tools keep their state across runs.
+          ...(session ? workbenchOf(session) : {}),
         }
       : session;
   if (setup?.breakpoints) s = { ...s, breakpoints: setup.breakpoints.map((b) => ({ ...b })) };
   if (setup?.dump) s = { ...s, dump: setup.dump };
   if (setup?.view) s = { ...s, view: setup.view };
   if (setup?.tab) s = { ...s, tab: setup.tab };
+  if (setup?.tool) s = { ...s, tool: setup.tool };
+  if (setup?.file) s = { ...s, file: setup.file, hexSel: null, peField: null };
+  if (setup?.hexAt) s = jumpHex(s, Number.parseInt(setup.hexAt, 16), 1);
+  if (setup?.hexSelect) s = jumpHex(s, Number.parseInt(setup.hexSelect[0], 16), setup.hexSelect[1]);
+  if (setup?.helper !== undefined) s = { ...s, helper: setup.helper };
+  if (setup?.converter !== undefined) s = { ...s, converter: setup.converter };
+  if (setup?.peNode) s = { ...s, peNode: setup.peNode, peField: null };
+  if (setup?.peNodes) s = { ...s, peNodes: setup.peNodes };
   return s;
+}
+
+function workbenchOf(s: Session): Partial<Session> {
+  const { tool, file, hexSel, hexTop, hexJump, helper, converter, peNode, peNodes, peField } = s;
+  return { tool, file, hexSel, hexTop, hexJump, helper, converter, peNode, peNodes, peField };
+}
+
+export const toolOf = (s: Session): ToolId => s.tool ?? "x64dbg";
+
+/** Scrolls the hex viewer to an offset and selects bytes there. */
+export function jumpHex(s: Session, offset: number, length: number): Session {
+  return { ...s, hexSel: [offset, length], hexTop: offset, hexJump: (s.hexJump ?? 0) + 1 };
+}
+
+/** Ctrl+G in the hex viewer: an offset in hex, with or without 0x. */
+function gotoOffset(s: Session, text: string): D.CommandResult {
+  const t = text.trim().replace(/^0x/i, "").replace(/h$/i, "");
+  if (!/^[0-9a-f]+$/i.test(t)) return { session: s, ok: false };
+  return { session: { ...jumpHex(s, Number.parseInt(t, 16), 1), goto: null }, ok: true };
+}
+
+function runGoto(rec: Recording, s: Session, text: string): D.CommandResult {
+  if (s.goto === "hex") return gotoOffset(s, text);
+  return D.gotoExpression(rec, s, s.goto === "disassembly" ? "disassembly" : "dump", text);
+}
+
+/** Overlay entries revealed so far: every answered step's reveal list. */
+export function revealed(lesson: Lesson, state: LessonState): Set<string> {
+  const out = new Set<string>();
+  lesson.steps.forEach((s, i) => {
+    if (i < state.stepIndex || (i === state.stepIndex && state.phase === "success") || state.done) s.reveal.forEach((r) => out.add(r));
+  });
+  return out;
 }
 
 function sessionAt(lesson: Lesson, stepIndex: number): Session {
@@ -134,6 +183,8 @@ export function initialState(lesson: Lesson, resume?: Resume): PlayerState {
       chosen: null,
       ordered: [],
       answered: 0,
+      filled: {},
+      unfilled: [],
       keys: resume?.keys ?? [],
       banner: lesson.steps[stepIndex]?.setup?.banner ?? null,
       done: stepIndex >= lesson.steps.length,
@@ -150,9 +201,19 @@ export function currentStep(lesson: Lesson, state: PlayerState): Step | undefine
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-/** A pattern matches a target exactly, or by prefix when it ends in "*". */
+/**
+ * A pattern matches a target exactly, or by prefix when it ends in "*". Hex viewer patterns can name
+ * a range of offsets: "hex:3C-3F" matches hex:3C, hex:3D, hex:3E, and hex:3F.
+ */
 export function matchesTarget(pattern: string, target: string): boolean {
   if (pattern.endsWith("*")) return target.startsWith(pattern.slice(0, -1));
+  const range = /^hex:([0-9A-F]+)-([0-9A-F]+)$/.exec(pattern);
+  if (range) {
+    const at = /^hex:([0-9A-F]+)$/.exec(target);
+    if (!at) return false;
+    const n = Number.parseInt(at[1]!, 16);
+    return n >= Number.parseInt(range[1]!, 16) && n <= Number.parseInt(range[2]!, 16);
+  }
   return pattern === target;
 }
 
@@ -195,6 +256,8 @@ function addressOf(target: string | null, kind: string): string | null {
 
 /** Runs one debugger key. Returns null when the key can't do anything right now. */
 export function performKey(rec: Recording, s: Session, key: string, selected: string | null): Session | null {
+  // The hex viewer and PE viewer only know Ctrl+G.
+  if (toolOf(s) !== "x64dbg") return key === "Ctrl+G" && toolOf(s) === "hex" ? { ...s, goto: "hex" } : null;
   switch (key) {
     case "F7":
       return D.stepInto(rec, s);
@@ -301,6 +364,8 @@ function advance(lesson: Lesson, state: PlayerState): PlayerState {
       chosen: null,
       ordered: [],
       answered: 0,
+      filled: {},
+      unfilled: [],
       banner: next?.setup?.banner ?? null,
       done: stepIndex >= lesson.steps.length,
     },
@@ -319,6 +384,30 @@ const miss = (state: PlayerState, text: string): PlayerState =>
   withLesson(state, { mistakes: state.lesson.mistakes + 1, feedback: { tone: "wrong", text } });
 const info = (state: PlayerState, text: string): PlayerState => withLesson(state, { feedback: { tone: "info", text } });
 
+/** Clicks that change what a tool shows: PE viewer nodes and rows, file tabs, tool tabs. */
+function viewClick(s: Session, target: string): Session {
+  const [kind, a, ...rest] = target.split(":");
+  if (kind === "file" && a) return { ...s, file: a, hexSel: null, peField: null };
+  if (kind === "tool" && a) return { ...s, tool: a as ToolId };
+  if (kind !== "pe" || !a) return s;
+  const value = rest.join(":");
+  if (a === "node") return { ...s, peNode: value, peField: null };
+  if (a === "field") return { ...s, peField: value };
+  if (a === "imp") return { ...s, peField: "imp:" + (rest[0] ?? "") };
+  if (a === "sec" || a === "exp") return { ...s, peField: a + ":" + value };
+  return s;
+}
+
+function checkFill(gate: Extract<Step["gate"], { type: "fill" }>, values: Record<string, string>): string[] {
+  return gate.fields
+    .filter((f) => {
+      const v = values[f.id] ?? "";
+      const fmt = f.format === "choice" ? "text" : f.format;
+      return ![f.answer, ...f.accept].some((a) => normalizeAnswer(fmt, a) === normalizeAnswer(fmt, v));
+    })
+    .map((f) => f.id);
+}
+
 /** In free steps the debugger behaves normally and goal steps pass as soon as their check holds. */
 function afterFree(lesson: Lesson, state: PlayerState, step: Step): PlayerState {
   if (step.gate.type !== "goal") return state;
@@ -331,8 +420,28 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
   const rec = getRecording(state.session.recording);
 
   // Views the learner can change at any time.
-  if (event.type === "tab") return { ...state, session: { ...state.session, tab: event.tab } };
+  if (event.type === "tab") {
+    const moved = { ...state, session: { ...state.session, tab: event.tab } };
+    // A step can ask for a tab: "Open the Call Stack tab".
+    if (step && !l.done && l.phase === "asking" && step.gate.type === "click" && step.gate.accept.some((p) => matchesTarget(p, "tab:" + event.tab))) {
+      return pass(lesson, moved, step);
+    }
+    return moved;
+  }
   if (event.type === "closeGoto") return { ...state, session: { ...state.session, goto: null } };
+  if (event.type === "select") {
+    const moved = { ...state, session: { ...state.session, hexSel: [event.start, event.length] as [number, number] } };
+    if (!step || l.done || l.phase !== "asking" || step.gate.type !== "select") return moved;
+    const gate = step.gate;
+    const start = Number.parseInt(gate.start, 16);
+    if (event.start === start && event.length === gate.length) return pass(lesson, moved, step);
+    if (event.length === 1) return moved;
+    if (event.length !== gate.length) return info(moved, "Select exactly " + gate.length + " bytes. You selected " + event.length + ".");
+    return miss(moved, gate.fallback);
+  }
+  if ((event.type === "click" || event.type === "dblclick") && /^(pe|file|tool):/.test(event.target)) {
+    state = { ...state, session: viewClick(state.session, event.target) };
+  }
   if (!step || l.done) return state;
 
   if (event.type === "continue") {
@@ -369,11 +478,11 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
     let session = current.session;
     if (event.type === "key" && DEBUG_KEYS.has(event.key)) {
       const next = performKey(rec, session, event.key, event.selected);
-      if (!next) return info(current, keyNeeds(event.key));
+      if (!next) return info(current, toolOf(session) === "x64dbg" ? keyNeeds(event.key) : "Debugger keys only work in x64dbg.");
       session = next;
     } else if (event.type === "command") {
-      const r = event.surface === "goto" ? D.gotoExpression(rec, session, session.goto ?? "dump", event.text) : D.command(rec, session, event.text);
-      if (!r.ok) return info({ ...current, session: r.session }, "x64dbg didn't understand that expression.");
+      const r = event.surface === "goto" ? runGoto(rec, session, event.text) : D.command(rec, session, event.text);
+      if (!r.ok) return info({ ...current, session: r.session }, session.goto === "hex" ? "Type an offset in hex, such as F8." : "x64dbg didn't understand that expression.");
       session = r.session;
     } else if (event.type === "menu") {
       session = performMenu(rec, session, event.target, event.item) ?? session;
@@ -416,10 +525,7 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
       const said = normalizeCommand(event.text);
       if (gate.accept.some((a) => normalizeCommand(a) === said)) {
         if (free) return pass(lesson, current, step);
-        const r =
-          gate.surface === "goto"
-            ? D.gotoExpression(rec, current.session, current.session.goto ?? "dump", event.text)
-            : D.command(rec, current.session, event.text);
+        const r = gate.surface === "goto" ? runGoto(rec, current.session, event.text) : D.command(rec, current.session, event.text);
         return pass(lesson, { ...current, session: r.session }, step);
       }
       const wrong = gate.wrong.find((w) => normalizeCommand(w.match) === said);
@@ -476,6 +582,14 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
       const next = withLesson(current, { placed, feedback: null });
       return gate.items.every((i) => placed[i.label]) ? pass(lesson, next, step) : next;
     }
+    case "fill": {
+      if (event.type !== "fill") return guided(current, event, free);
+      const wrong = checkFill(gate, event.values);
+      const filled = Object.fromEntries(gate.fields.filter((f) => !wrong.includes(f.id)).map((f) => [f.id, event.values[f.id] ?? ""]));
+      if (!wrong.length) return pass(lesson, withLesson(current, { filled, unfilled: [] }), step);
+      return withLesson(miss(current, gate.fallback), { filled, unfilled: wrong });
+    }
+    case "select":
     case "continue":
     case "goal":
       return guided(current, event, free);

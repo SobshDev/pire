@@ -1,4 +1,4 @@
-import { moduleOf, rowAt, symbolize, type Breakpoint } from "../../engine/debugger";
+import { callStack, moduleOf, rowAt, symbolize, type Breakpoint } from "../../engine/debugger";
 import { cx } from "../../ui/bits";
 import { useTarget, useView } from "../view";
 import { Pane } from "./Pane";
@@ -12,6 +12,8 @@ export function TabView() {
       {tab === "Breakpoints" && <Breakpoints />}
       {tab === "References" && <References />}
       {tab === "Log" && <Log />}
+      {tab === "Memory Map" && <MemoryMap />}
+      {tab === "Call Stack" && <CallStack />}
     </Pane>
   );
 }
@@ -104,12 +106,84 @@ function RefRow({ address, text }: { address: string; text: string }) {
 
 function Log() {
   const view = useView();
+  const start = view.rec.log ?? [];
   return (
     <div className="pane-scroll min-h-0 grow overflow-y-auto p-2 font-mono text-xs/5 text-muted">
-      {view.session.log.length === 0 && <p className="font-sans text-faint">The log is empty.</p>}
+      {start.length + view.session.log.length === 0 && <p className="font-sans text-faint">The log is empty.</p>}
+      {start.map((line, i) => (
+        <LogLine key={"start" + i} id={"log:" + i} text={line} />
+      ))}
       {view.session.log.map((line, i) => (
         <p key={i}>{line}</p>
       ))}
+    </div>
+  );
+}
+
+function LogLine({ id, text }: { id: string; text: string }) {
+  const { props, selected } = useTarget(id, "tabview", "hover:bg-[#1A1815]");
+  return (
+    <p {...props} className={cx(props.className, selected && "bg-raised text-fg")}>
+      {text}
+    </p>
+  );
+}
+
+function MemoryMap() {
+  const view = useView();
+  const rows = view.rec.memoryMap ?? [];
+  return (
+    <div className="flex min-h-0 grow flex-col">
+      <Header cols={[["Address", "w-40"], ["Size", "w-40"], ["Info", "w-56"], ["Content", "w-56"], ["Type", "w-14"], ["Protection", "grow"]]} />
+      <div className="pane-scroll min-h-0 grow overflow-y-auto font-mono text-xs/6">
+        {rows.map((r) => (
+          <MapLine key={r.address} row={r} />
+        ))}
+      </div>
+      <p className="shrink-0 border-t border-line px-3 py-1.5 text-[11px] text-faint">E execute, R read, W write, G guard page.</p>
+    </div>
+  );
+}
+
+function MapLine({ row }: { row: NonNullable<ReturnType<typeof useView>["rec"]["memoryMap"]>[number] }) {
+  const own = row.address.startsWith("00000001400");
+  const { props, selected } = useTarget("mem:" + row.address, "tabview", "flex items-center hover:bg-[#1A1815]");
+  return (
+    <div {...props} className={cx(props.className, selected && "bg-raised", own ? "text-fg" : "text-muted")}>
+      <span className="w-40 px-2">{row.address}</span>
+      <span className="w-40 px-2">{row.size}</span>
+      <span className={cx("w-56 truncate px-2", own && "text-amber")}>{row.info}</span>
+      <span className="w-56 truncate px-2 font-sans text-comment">{row.content}</span>
+      <span className="w-14 px-2">{row.type}</span>
+      <span className="grow px-2">{row.protection}</span>
+    </div>
+  );
+}
+
+function CallStack() {
+  const view = useView();
+  const frames = callStack(view.rec, view.session);
+  return (
+    <div className="flex min-h-0 grow flex-col">
+      <Header cols={[["Address", "w-40"], ["To", "w-40"], ["From", "w-40"], ["Comment", "grow"]]} />
+      <div className="pane-scroll min-h-0 grow overflow-y-auto font-mono text-xs/6" data-testid="call-stack">
+        {frames.map((f, i) => (
+          <CallLine key={f.slot + i} i={i} slot={f.slot} to={f.to} from={f.from} comment={f.comment} />
+        ))}
+      </div>
+      <p className="shrink-0 border-t border-line px-3 py-1.5 text-[11px] text-faint">Newest call at the top. Each row below is a return address saved on the stack.</p>
+    </div>
+  );
+}
+
+function CallLine({ i, slot, to, from, comment }: { i: number; slot: string; to: string; from: string | null; comment: string }) {
+  const { props, selected } = useTarget("callstack:" + i, "tabview", "flex items-center hover:bg-[#1A1815]");
+  return (
+    <div {...props} className={cx(props.className, selected && "bg-raised")}>
+      <span className="w-40 px-2 text-muted">{slot}</span>
+      <span className="w-40 px-2">{to}</span>
+      <span className="w-40 px-2 text-muted">{from ?? ""}</span>
+      <span className="grow truncate px-2 text-comment">{comment}</span>
     </div>
   );
 }

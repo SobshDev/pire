@@ -118,7 +118,7 @@ function MenuList({ items, onPick }: { items: MenuItem[]; onPick(id: string): vo
   );
 }
 
-export function GotoDialog({ pane, onSubmit, onClose }: { pane: "dump" | "disassembly"; onSubmit(text: string): void; onClose(): void }) {
+export function GotoDialog({ pane, onSubmit, onClose }: { pane: "dump" | "disassembly" | "hex"; onSubmit(text: string): void; onClose(): void }) {
   const [text, setText] = useState("");
   return (
     <div className="absolute inset-0 z-40 flex items-start justify-center bg-ink/40 pt-40" onMouseDown={onClose}>
@@ -133,7 +133,7 @@ export function GotoDialog({ pane, onSubmit, onClose }: { pane: "dump" | "disass
         className="w-96 rounded-sm border border-line bg-panel shadow-2xl"
       >
         <div className="border-b border-line px-3 py-1.5 text-xs text-muted">
-          {"Enter expression to follow in " + (pane === "dump" ? "Dump" : "Disassembler") + "..."}
+          {pane === "hex" ? "Go to offset (hex)" : "Enter expression to follow in " + (pane === "dump" ? "Dump" : "Disassembler") + "..."}
         </div>
         <div className="flex gap-2 p-3">
           <input

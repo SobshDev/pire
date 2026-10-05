@@ -4,9 +4,18 @@ import { z } from "zod";
  * Ids of the x64dbg panes a lesson can spotlight, dim, or use as drop targets.
  * A spotlight can also name a part of a pane, such as "registers.flags".
  */
-export const paneIds = ["disassembly", "infobox", "registers", "dump", "stack", "command", "status", "console", "tabview"] as const;
+export const paneIds = [
+  "disassembly", "infobox", "registers", "dump", "stack", "command", "status", "console", "tabview",
+  "hex", "inspector", "petree", "pedetail", "pehex",
+] as const;
 export const PaneId = z.enum(paneIds);
 export type PaneId = z.infer<typeof PaneId>;
+
+/** The tool on screen: the x64dbg recreation, the hex viewer, or the PE viewer. */
+export const ToolId = z.enum(["x64dbg", "hex", "pe"]);
+export type ToolId = z.infer<typeof ToolId>;
+
+export const tabIds = ["CPU", "Log", "Breakpoints", "Memory Map", "Call Stack", "References"] as const;
 
 export const SourceFile = z.object({
   name: z.string(),
@@ -41,9 +50,24 @@ export const Setup = z.object({
   dump: hex.optional(),
   /** Address the disassembly shows. Omit to follow RIP. */
   view: hex.optional(),
-  tab: z.enum(["CPU", "Breakpoints", "References", "Log"]).optional(),
+  tab: z.enum(tabIds).optional(),
   /** Text shown in the guide while the scene changes, such as "New run: this time the code is opensesame". */
   banner: z.string().optional(),
+  /** Switches tools, such as from the hex viewer to x64dbg. */
+  tool: ToolId.optional(),
+  /** The file the hex viewer and PE viewer show, by id. */
+  file: z.string().optional(),
+  /** File offset the hex viewer scrolls to and selects. */
+  hexAt: hex.optional(),
+  /** Bytes the hex viewer selects, as [offset, length]. */
+  hexSelect: z.tuple([hex, z.number().int().positive()]).optional(),
+  /** The little-endian helper: select bytes and it shows their value. */
+  helper: z.boolean().optional(),
+  /** The address converter: VA, RVA, and file offset for the current file. */
+  converter: z.boolean().optional(),
+  /** PE viewer: the node shown, and the nodes listed in the tree (omit for all). */
+  peNode: z.string().optional(),
+  peNodes: z.array(z.string()).optional(),
 });
 export type Setup = z.infer<typeof Setup>;
 
@@ -148,6 +172,32 @@ export const Gate = z.discriminatedUnion("type", [
     items: z.array(z.object({ label: z.string(), pane: PaneId })).min(2),
     fallback: z.string(),
   }),
+  z.object({
+    type: z.literal("select"),
+    /** File offset and length of the bytes to select in the hex viewer. */
+    start: hex,
+    length: z.number().int().positive(),
+    fallback: z.string(),
+  }),
+  z.object({
+    type: z.literal("fill"),
+    /** A card of answers, all checked at once, such as a file's passport. */
+    fields: z
+      .array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          format: z.enum(["hex", "int", "text", "choice"]),
+          answer: z.string(),
+          /** Other answers that count, such as "vault.exe+1530" for "1530". */
+          accept: z.array(z.string()).default([]),
+          options: z.array(z.string()).default([]),
+          placeholder: z.string().default(""),
+        }),
+      )
+      .min(1),
+    fallback: z.string().default("Some answers don't match yet. They're marked in red."),
+  }),
 ]);
 export type Gate = z.infer<typeof Gate>;
 
@@ -184,6 +234,10 @@ export const Step = z.object({
       rows: z.array(z.object({ label: z.string(), bytes: z.string(), highlight: z.array(z.number().int()).default([]) })),
     })
     .optional(),
+  /** A drawn explanation in the guide, such as "rulers" (file offset, RVA, VA side by side). */
+  diagram: z.enum(["rulers", "alignment", "mapping", "timeline"]).optional(),
+  /** Hex viewer overlay entries (structure or field ids) shown once this step is answered, and after. */
+  reveal: z.array(z.string()).default([]),
 });
 export type Step = z.infer<typeof Step>;
 
@@ -204,7 +258,10 @@ export const Lesson = z.object({
     infobox: z.string().optional(),
     callArgs: z.string().optional(),
     command: z.string().optional(),
+    helper: z.string().optional(),
   }),
+  /** Tools and files the learner can switch between with tabs. Omit for a single tool. */
+  workbench: z.object({ tools: z.array(ToolId).default([]), files: z.array(z.string()).default([]) }).optional(),
   /** Show the program's console window. */
   console: z.boolean().default(false),
   /** Challenge lessons: no guided text, a goal list, a shared pool of hint tokens, and a medal. */

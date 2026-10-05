@@ -1,9 +1,9 @@
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { catalog, getRecording, type Lesson, type PaneId } from "@pire/content";
+import { catalog, getFile, getRecording, type Lesson, type PaneId } from "@pire/content";
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useSaveProgress } from "../api/queries";
-import { DEBUG_KEYS, initialState, reduce, type PlayerEvent, type PlayerState, type Resume } from "../engine/lesson";
+import { DEBUG_KEYS, initialState, reduce, revealed, toolOf, type PlayerEvent, type PlayerState, type Resume } from "../engine/lesson";
 import { Keycap, Logo } from "../ui/bits";
 import { Completion } from "./Completion";
 import { CommandBar, StatusBar, WindowChrome } from "./debugger/Chrome";
@@ -15,6 +15,9 @@ import { Registers } from "./debugger/Registers";
 import { Stack } from "./debugger/Stack";
 import { TabView } from "./debugger/TabView";
 import { ChipBody, Guide } from "./Guide";
+import { HexView, Inspector } from "./hex/HexView";
+import { PeView } from "./pe/PeView";
+import { ToolChrome } from "./ToolChrome";
 import { parseSpotlight, useView as useContextView, ViewContext, type View } from "./view";
 
 type Action = PlayerEvent | { type: "reset" };
@@ -47,6 +50,10 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
   const { lesson: ls, session } = state;
   const step = lesson.steps[ls.stepIndex];
   const rec = getRecording(session.recording);
+  const tool = toolOf(session);
+  const fileId = session.file ?? lesson.start.file ?? null;
+  const file = fileId ? getFile(fileId) : null;
+  const found = useMemo(() => revealed(lesson, ls), [lesson, ls]);
 
   // Save after every step change. The first render is the state we just loaded.
   const save = useSaveProgress(lesson.id);
@@ -142,9 +149,15 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
       menu(id, pane, x, y) {
         if (!blocked(pane) && menuFor(id).length) setMenu({ target: id, x, y });
       },
+      file,
+      revealed: found,
+      select(start, length, pane) {
+        if (!blocked(pane)) dispatch({ type: "select", start, length });
+      },
+      locks: lesson.locks,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rec, session, spot.spotPane, spot.spotPart, ls.phase, ls.placed, step, selected, matching, blocked],
+    [rec, session, spot.spotPane, spot.spotPart, ls.phase, ls.placed, step, selected, matching, blocked, file, found],
   );
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor));
@@ -208,8 +221,15 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
 
             <div className="flex min-h-0 grow">
               <div className="relative flex min-w-0 grow flex-col overflow-hidden">
-                <WindowChrome onTab={(tab) => dispatch({ type: "tab", tab })} />
-                {session.tab === "CPU" ? (
+                {tool === "x64dbg" ? <WindowChrome onTab={(tab) => dispatch({ type: "tab", tab })} /> : <ToolChrome lesson={lesson} />}
+                {tool === "hex" && file ? (
+                  <div className="flex min-h-0 grow">
+                    <HexView />
+                    <Inspector />
+                  </div>
+                ) : tool === "pe" && file ? (
+                  <PeView />
+                ) : session.tab === "CPU" ? (
                   <>
                     <div className="flex min-h-0 grow-[1.9] basis-0 border-b border-line">
                       <div className="flex min-w-0 grow flex-col">
@@ -227,8 +247,12 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
                   <TabView />
                 )}
                 {lesson.console && <ConsoleWindow />}
-                <CommandBar lock={lesson.locks.command} onCommand={(text) => dispatch({ type: "command", surface: "command", text })} />
-                <StatusBar />
+                {tool === "x64dbg" && (
+                  <>
+                    <CommandBar lock={lesson.locks.command} onCommand={(text) => dispatch({ type: "command", surface: "command", text })} />
+                    <StatusBar />
+                  </>
+                )}
                 <MessageBox />
                 {session.goto && (
                   <GotoDialog

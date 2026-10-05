@@ -1,5 +1,6 @@
 import { assemble, big, bytesOf, hex, record, rel32, type AsmContext, type AsmRow, type Machine, type Program, type ProgramModule } from "../machine/machine";
 import type { MemoryRegion, Recording, SymbolInfo } from "../machine/types";
+import { buildPe, type PeFile } from "../pe/build";
 
 /*
  * A small MSVC x64 console program (the debug-fixed profile): the program's own functions from a spec,
@@ -9,21 +10,56 @@ import type { MemoryRegion, Recording, SymbolInfo } from "../machine/types";
  * from 140005000.
  */
 
-const IAT = {
-  MessageBoxA: 0x140002000n,
-  __acrt_iob_func: 0x1400021c8n,
-  puts: 0x1400021d0n,
-  fgets: 0x1400021d8n,
-  strcspn: 0x1400021e0n,
-  __stdio_common_vfprintf: 0x1400021e8n,
-  _initterm: 0x1400021f0n,
-  _get_initial_narrow_environment: 0x1400021f8n,
-  strcmp: 0x140002200n,
-  __p___argv: 0x140002208n,
-  __p___argc: 0x140002210n,
-  exit: 0x140002218n,
-} as const;
-export type Import = keyof typeof IAT;
+/**
+ * Every DLL the program imports and the functions it takes from each, in IAT order. This is what a
+ * real /MD build of a small console program imports. Only some of these run in the recordings.
+ */
+export const IMPORTS: { dll: string; funcs: string[] }[] = [
+  {
+    dll: "KERNEL32.dll",
+    funcs: [
+      "RtlCaptureContext", "RtlLookupFunctionEntry", "RtlVirtualUnwind", "UnhandledExceptionFilter",
+      "SetUnhandledExceptionFilter", "GetCurrentProcess", "TerminateProcess", "IsProcessorFeaturePresent",
+      "QueryPerformanceCounter", "GetCurrentProcessId", "GetCurrentThreadId", "GetSystemTimeAsFileTime",
+      "InitializeSListHead", "IsDebuggerPresent", "GetModuleHandleW",
+    ],
+  },
+  { dll: "USER32.dll", funcs: ["MessageBoxA"] },
+  { dll: "VCRUNTIME140.dll", funcs: ["__current_exception", "__current_exception_context", "memset", "__C_specific_handler"] },
+  { dll: "api-ms-win-crt-stdio-l1-1-0.dll", funcs: ["__acrt_iob_func", "puts", "fgets", "__stdio_common_vfprintf", "_set_fmode", "__p__commode"] },
+  { dll: "api-ms-win-crt-string-l1-1-0.dll", funcs: ["strcspn", "strcmp"] },
+  {
+    dll: "api-ms-win-crt-runtime-l1-1-0.dll",
+    funcs: [
+      "_initterm", "_initterm_e", "_get_initial_narrow_environment", "__p___argv", "__p___argc", "exit", "_exit",
+      "_cexit", "_c_exit", "_register_thread_local_exe_atexit_callback", "_configure_narrow_argv",
+      "_initialize_narrow_environment", "_seh_filter_exe", "_set_app_type", "_crt_atexit",
+      "_register_onexit_function", "_initialize_onexit_table", "terminate",
+    ],
+  },
+  { dll: "api-ms-win-crt-math-l1-1-0.dll", funcs: ["__setusermatherr"] },
+  { dll: "api-ms-win-crt-locale-l1-1-0.dll", funcs: ["_configthreadlocale"] },
+  { dll: "api-ms-win-crt-heap-l1-1-0.dll", funcs: ["_set_new_mode"] },
+];
+
+/** The IAT starts .rdata. Each DLL's slots end with a zero slot. */
+export const IAT_BASE = 0x140002000n;
+const IAT_ALL: Record<string, bigint> = (() => {
+  const out: Record<string, bigint> = {};
+  let at = IAT_BASE;
+  for (const { funcs } of IMPORTS) {
+    for (const f of funcs) {
+      out[f] = at;
+      at += 8n;
+    }
+    at += 8n;
+  }
+  return out;
+})();
+
+const USED = ["MessageBoxA", "__acrt_iob_func", "puts", "fgets", "strcspn", "__stdio_common_vfprintf", "_initterm", "_get_initial_narrow_environment", "strcmp", "__p___argv", "__p___argc", "exit"] as const;
+export type Import = (typeof USED)[number];
+const IAT = Object.fromEntries(USED.map((n) => [n, IAT_ALL[n]!])) as Record<Import, bigint>;
 
 /** Globals the C runtime itself owns. */
 const CRT_DATA = {
@@ -386,6 +422,19 @@ function qwords(base: bigint, size: number, values: [bigint, bigint][]): string 
   return bytes.map((b) => hex(b, 2)).join(" ");
 }
 
+/** Where the loader points each IAT slot. Functions the recordings never run get plausible addresses in their DLL. */
+const DLL_BASE: Record<string, bigint> = {
+  "KERNEL32.dll": 0x7ffe1c9a1000n,
+  "USER32.dll": 0x7ffe1c3b1000n,
+  "VCRUNTIME140.dll": 0x7ffe0f2c1000n,
+};
+export function loadedAddress(name: string): bigint {
+  if (name in LIB) return LIB[name as Import];
+  const dll = IMPORTS.find((d) => d.funcs.includes(name))!;
+  const i = dll.funcs.indexOf(name);
+  return (DLL_BASE[dll.dll] ?? 0x7ffe1a2b0000n) + BigInt(i) * 0x1a40n + BigInt((name.length * 0x37) & 0x3f0);
+}
+
 
 function stringsRegion(spec: AppSpec): string {
   const bytes = new Array<number>(0x80).fill(0);
@@ -395,7 +444,7 @@ function stringsRegion(spec: AppSpec): string {
 
 function memoryFor(spec: AppSpec): MemoryRegion[] {
   return [
-    { base: hex(0x140002000n), size: 0x240, section: ".rdata", bytes: qwords(0x140002000n, 0x240, Object.entries(IAT).map(([n, a]) => [a, LIB[n as Import]])) },
+    { base: hex(IAT_BASE), size: 0x240, section: ".rdata", bytes: qwords(IAT_BASE, 0x240, Object.entries(IAT_ALL).map(([n, a]) => [a, loadedAddress(n)])) },
     { base: hex(STRINGS_BASE), size: 0x100, section: ".rdata", bytes: stringsRegion(spec) },
     {
       base: hex(DATA_BASE), size: 0x200, section: ".data",
@@ -487,12 +536,144 @@ export function recordSpecimen(spec: AppSpec, input: { wrong: string; right: str
   const stripped = buildProgram(spec, { symbols: false });
   const exe = spec.exe + ".exe";
   const process = { name: exe, pid: "2F18", tid: "1C4C" };
-  const run = (program: Program, id: string, label: string, stdin: string) => record(program, { id, label: label + ", input " + stdin, stdin, process });
+  const extras = loaderView(spec, named.labels.mainCRTStartup!);
+  const run = (program: Program, id: string, label: string, stdin: string): Recording => ({
+    ...record(program, { id, label: label + ", input " + stdin, stdin, process }),
+    ...extras,
+  });
   return {
     wrong: run(named, spec.exe + ".wrong", exe, input.wrong),
     right: run(named, spec.exe + ".right", exe, input.right),
     strippedWrong: run(stripped, spec.exe + "-stripped.wrong", exe + " without PDB", input.wrong),
     strippedRight: run(stripped, spec.exe + "-stripped.right", exe + " without PDB", input.right),
     at: Object.fromEntries(Object.entries(named.labels).map(([k, v]) => [k, hex(v)])),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* The file on disk                                                    */
+/* ------------------------------------------------------------------ */
+
+const IMAGE_BASE = 0x140000000n;
+const DEFAULT_COOKIE = 0x2b992ddfa232n;
+const UNWIND_AT = 0x3300;
+
+/**
+ * The specimen as a PE file: the same code bytes the recordings show, the IAT and import tables, the
+ * strings, the initial globals, and exception tables. The ASLR build sets DYNAMIC_BASE and adds .reloc
+ * entries for the pointers stored in .data.
+ */
+export function peFileFor(spec: AppSpec, opts: { aslr: boolean }): PeFile {
+  const program = buildProgram(spec, { symbols: false });
+  const app = program.modules[0]!;
+  const rva = (a: bigint) => Number(a - IMAGE_BASE);
+  const parse = (b: string) => b.replace(/[: ]/g, "").match(/../g)!.map((x) => Number.parseInt(x, 16));
+
+  const text: number[] = [];
+  for (const row of app.rows) {
+    const off = rva(big(row.address)) - 0x1000;
+    parse(row.bytes).forEach((b, i) => (text[off + i] = b));
+  }
+  for (let i = 0; i < text.length; i++) text[i] ??= 0xcc;
+
+  const rdata: number[] = new Array(0x1400).fill(0);
+  for (const [a, s] of spec.strings) [...s].forEach((ch, i) => (rdata[rva(a) - 0x2000 + i] = ch.charCodeAt(0)));
+
+  // One RUNTIME_FUNCTION per non-leaf function, each pointing at a small UNWIND_INFO in .rdata.
+  const starts = [...spec.functions, "printf", "__scrt_common_main_seh", "mainCRTStartup"]
+    .map((n) => program.labels[n]!)
+    .sort((a, b) => (a < b ? -1 : 1));
+  const pdata: number[] = [];
+  const le = (out: number[], off: number, v: number) => [0, 1, 2, 3].forEach((i) => (out[off + i] = (v >>> (8 * i)) & 0xff));
+  starts.forEach((start, i) => {
+    const next = starts[i + 1] ?? 0x140001220n;
+    const end = app.rows.find((r) => big(r.address) > start && (big(r.address) >= next || r.mnemonic === "int3"))?.address;
+    const unwind = UNWIND_AT + i * 8;
+    [0x01, 0x04, 0x01, 0x00, 0x04, 0x42, 0x00, 0x00].forEach((b, k) => (rdata[unwind - 0x2000 + k] = b));
+    le(pdata, i * 12, rva(start));
+    le(pdata, i * 12 + 4, rva(end ? big(end) : next));
+    le(pdata, i * 12 + 8, unwind);
+  });
+
+  const data: number[] = new Array(0x48).fill(0);
+  const qw = (a: bigint, v: bigint) => {
+    for (let i = 0; i < 8; i++) data[rva(a) - 0x5000 + i] = Number((v >> BigInt(i * 8)) & 0xffn);
+  };
+  for (const [a, v] of spec.dataInit) qw(a, v);
+  qw(CRT_DATA.__security_cookie, DEFAULT_COOKIE);
+
+  const name = spec.exe + (opts.aslr ? "-aslr" : "") + ".exe";
+  return buildPe({
+    id: spec.exe + (opts.aslr ? "-aslr" : ""),
+    name,
+    bits: 64,
+    imageBase: IMAGE_BASE,
+    entry: rva(program.labels.mainCRTStartup!),
+    subsystem: 3,
+    dllChars: opts.aslr ? 0x8160 : 0x8120,
+    timestamp: 0x66f1a2b3,
+    sections: [
+      { name: ".text", va: 0x1000, bytes: text, chars: 0x60000020 },
+      { name: ".rdata", va: 0x2000, bytes: rdata, chars: 0x40000040 },
+      { name: ".data", va: 0x5000, bytes: data, vsize: 0x640, chars: 0xc0000040 },
+      { name: ".pdata", va: 0x6000, bytes: pdata, chars: 0x40000040 },
+    ],
+    imports: IMPORTS,
+    importAt: { iat: rva(IAT_BASE), dir: 0x4000 },
+    ...(opts.aslr ? { relocs: spec.dataInit.map(([a]) => rva(a)) } : {}),
+  });
+}
+
+/** What x64dbg shows about loading: the Log tab up to the system breakpoint, the Memory Map, and the frames below the entry point. */
+function loaderView(spec: AppSpec, entry: bigint): Pick<Recording, "log" | "memoryMap" | "baseFrames"> {
+  const exe = spec.exe + ".exe";
+  const dlls: [bigint, string][] = [
+    [0x7ffe1e790000n, "ntdll.dll"],
+    [0x7ffe1c990000n, "kernel32.dll"],
+    [0x7ffe1b6d0000n, "KernelBase.dll"],
+    [0x7ffe1c3b0000n, "user32.dll"],
+    [0x7ffe1bb40000n, "win32u.dll"],
+    [0x7ffe1c8e0000n, "gdi32.dll"],
+    [0x7ffe1b9f0000n, "gdi32full.dll"],
+    [0x7ffe1ba80000n, "msvcp_win.dll"],
+    [0x7ffe1a2a0000n, "ucrtbase.dll"],
+    [0x7ffe0f2c0000n, "vcruntime140.dll"],
+  ];
+  const log = [
+    "Process Started: " + hex(0x140000000n) + " C:\\pire\\" + exe,
+    '  "C:\\pire\\' + exe + '"',
+    "  argv[0]: C:\\pire\\" + exe,
+    "Breakpoint at " + hex(entry) + " (entry breakpoint) set!",
+    ...dlls.map(([base, name]) => "DLL Loaded: " + hex(base) + " C:\\Windows\\System32\\" + name),
+    "Thread 1C4C created, Entry: ntdll.RtlUserThreadStart",
+    "System breakpoint reached!",
+  ];
+  const row = (address: bigint, size: number, info: string, content: string, type: "IMG" | "PRV" | "MAP", protection: string) => ({
+    address: hex(address), size: hex(BigInt(size)), info, content, type, protection,
+  });
+  const memoryMap = [
+    row(0x14d000n, 0x3000, "Thread 1C4C Stack", "", "PRV", "-RW-G"),
+    row(0x2a0000n, 0x10000, "Heap (ID 0)", "", "PRV", "-RW--"),
+    row(0x2d7000n, 0x1000, "PEB", "", "PRV", "-RW--"),
+    row(0x140000000n, 0x1000, exe, "", "IMG", "-R---"),
+    row(0x140001000n, 0x1000, "\".text\"", "Executable code", "IMG", "ER---"),
+    row(0x140002000n, 0x3000, "\".rdata\"", "Read-only initialized data", "IMG", "-R---"),
+    row(0x140005000n, 0x1000, "\".data\"", "Initialized data", "IMG", "-RW--"),
+    row(0x140006000n, 0x1000, "\".pdata\"", "Exception information", "IMG", "-R---"),
+    ...dlls.slice(0).sort((a, b) => (a[0] < b[0] ? -1 : 1)).flatMap(([base, name]) => [
+      row(base, 0x1000, name, "", "IMG" as const, "-R---"),
+      row(base + 0x1000n, 0x7f000, "\".text\"", "Executable code", "IMG" as const, "ER---"),
+      row(base + 0x80000n, 0x20000, "\".rdata\"", "Read-only initialized data", "IMG" as const, "-R---"),
+    ]),
+    row(0x7ffe1a3a0000n, 0x10000, "ucrtbase.dll \".data\"", "Initialized data", "IMG", "-RW--"),
+    row(0x7ffe0000n, 0x1000, "KUSER_SHARED_DATA", "", "PRV", "-R---"),
+  ].sort((a, b) => (BigInt("0x" + a.address) < BigInt("0x" + b.address) ? -1 : 1));
+  return {
+    log,
+    memoryMap,
+    baseFrames: [
+      { slot: hex(ENTRY_RSP), to: hex(RET_THREAD_INIT), from: hex(entry) },
+      { slot: hex(0x14ff38n), to: hex(RET_USER_THREAD), from: hex(0x7ffe1c9a7330n) },
+    ],
   };
 }

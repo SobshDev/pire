@@ -1,5 +1,5 @@
 import { createContext, useContext, type MouseEvent } from "react";
-import type { PaneId, Recording, TraceState } from "@pire/content";
+import type { Lesson, PaneId, PeFile, Recording, TraceState } from "@pire/content";
 import type { Session } from "../engine/debugger";
 import { cx } from "../ui/bits";
 
@@ -26,6 +26,11 @@ export interface View {
   target(id: string, pane: PaneId): void;
   dblclick(id: string, pane: PaneId): void;
   menu(id: string, pane: PaneId, x: number, y: number): void;
+  /** Hex viewer: the file on screen, overlay entries found so far, and selecting bytes. */
+  file: PeFile | null;
+  revealed: ReadonlySet<string>;
+  select(start: number, length: number, pane: PaneId): void;
+  locks: Lesson["locks"];
 }
 
 export const ViewContext = createContext<View | null>(null);

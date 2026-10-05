@@ -1,4 +1,4 @@
-import type { CodeRow, Recording, TraceState } from "@pire/content";
+import type { CodeRow, Recording, ToolId, TraceState } from "@pire/content";
 
 /**
  * The debugger session: what x64dbg would be doing right now on top of a recording. Every function
@@ -6,8 +6,8 @@ import type { CodeRow, Recording, TraceState } from "@pire/content";
  */
 
 export type Hex = string;
-export type Tab = "CPU" | "Breakpoints" | "References" | "Log";
-export const TABS: Tab[] = ["CPU", "Breakpoints", "References", "Log"];
+export type Tab = "CPU" | "Breakpoints" | "References" | "Log" | "Memory Map" | "Call Stack";
+export const TABS: Tab[] = ["CPU", "Breakpoints", "References", "Log", "Memory Map", "Call Stack"];
 
 export interface Breakpoint {
   address: Hex;
@@ -34,7 +34,22 @@ export interface Session {
   /** Whether a string reference search has filled the References tab. */
   references: boolean;
   /** Open "Enter expression to follow" dialog, if any. */
-  goto: "dump" | "disassembly" | null;
+  goto: "dump" | "disassembly" | "hex" | null;
+  /** The tool on screen. Missing means x64dbg (sessions saved before Module 2). */
+  tool?: ToolId;
+  /** File open in the hex viewer and PE viewer. */
+  file?: string | null;
+  /** Hex viewer selection as [offset, length]. */
+  hexSel?: [number, number] | null;
+  /** Offset the hex viewer last jumped to, and a counter so jumping to the same offset scrolls again. */
+  hexTop?: number;
+  hexJump?: number;
+  helper?: boolean;
+  converter?: boolean;
+  peNode?: string;
+  peNodes?: string[] | null;
+  /** PE viewer: the selected field, import DLL ("imp:USER32.dll"), or section cell. */
+  peField?: string | null;
 }
 
 export const pad = (v: bigint) => v.toString(16).toUpperCase().padStart(16, "0");
@@ -390,4 +405,43 @@ export function followInDisassembler(s: Session, address: Hex): Session {
 
 export function searchStrings(s: Session): Session {
   return { ...s, references: true, tab: "References" };
+}
+
+/* ------------------------------------------------------------------ */
+/* Call stack                                                          */
+/* ------------------------------------------------------------------ */
+
+export interface Frame {
+  /** Stack address of the return address, or RSP for the current frame. */
+  slot: Hex;
+  /** Return address, or RIP for the current frame. */
+  to: Hex;
+  /** Start of the function the frame returns from. */
+  from: Hex | null;
+  comment: string;
+}
+
+/** The Call Stack tab: the current frame, every call still open in the trace, then the Windows frames below the entry point. */
+export function callStack(rec: Recording, s: Session): Frame[] {
+  const open: { slot: Hex; to: Hex; callee: Hex }[] = [];
+  let started = false;
+  for (let i = 0; i < s.index; i++) {
+    const a = rec.states[i]!;
+    const b = rec.states[i + 1]!;
+    if (b.event?.includes("entry breakpoint")) {
+      open.length = 0;
+      started = true;
+      continue;
+    }
+    if (b.depth > a.depth) open.push({ slot: b.regs.RSP!, to: rowAt(rec, a.rip)?.next ?? a.rip, callee: b.rip });
+    else if (b.depth < a.depth) open.pop();
+  }
+  const st = stateOf(rec, s);
+  const name = (a: Hex) => symbolize(rec, a) ?? a;
+  const frames: Frame[] = [{ slot: st.regs.RSP!, to: st.rip, from: null, comment: name(st.rip) }];
+  for (const f of [...open].reverse()) frames.push({ slot: f.slot, to: f.to, from: f.callee, comment: "return to " + name(f.to) + " from " + name(f.callee) });
+  if (started) {
+    for (const f of rec.baseFrames ?? []) frames.push({ slot: f.slot, to: f.to, from: f.from, comment: "return to " + name(f.to) + " from " + name(f.from) });
+  }
+  return frames;
 }

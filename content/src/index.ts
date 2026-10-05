@@ -8,10 +8,15 @@ import { gettingToMain } from "./modules/m1/l5-getting-to-main";
 import { theVault } from "./modules/m1/challenge-the-vault";
 import { vaultRecordings } from "./specimens/vault";
 import { vault2Recordings } from "./specimens/vault2";
+import { peFileFor } from "./specimens/msvc";
+import { vaultSpec } from "./specimens/vault/program";
+import { travelerA, travelerB, travelerC, user32 } from "./specimens/files";
+import type { PeFile } from "./pe/build";
 
 export * from "./schema";
 export type * from "./machine/types";
 export { FLAG_ORDER, flagsFromRflags, type FlagName } from "./machine/machine";
+export * from "./pe/build";
 
 /** Every recording lessons can use, by id. */
 export const recordings: Record<string, Recording> = Object.fromEntries(
@@ -26,12 +31,25 @@ export function getRecording(id: string): Recording {
   return rec;
 }
 
+/** Every file the hex viewer and PE viewer can open, by id. */
+export const files: Record<string, PeFile> = Object.fromEntries(
+  [peFileFor(vaultSpec, { aslr: false }), peFileFor(vaultSpec, { aslr: true }), travelerA(), travelerB(), travelerC(), user32()].map((f) => [f.id, f]),
+);
+
+export function getFile(id: string): PeFile {
+  const f = files[id];
+  if (!f) throw new Error("unknown file " + id);
+  return f;
+}
+
 /** Every playable lesson, validated when the module loads so bad content fails fast. */
 export const lessons: Record<string, Lesson> = Object.fromEntries(
   [tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain, theVault].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];
     for (const id of used) if (!recordings[id]) throw new Error(lesson.id + " uses unknown recording " + id);
+    const usedFiles = [lesson.start.file, ...lesson.steps.map((s) => s.setup?.file), ...(lesson.workbench?.files ?? [])];
+    for (const id of usedFiles) if (id && !files[id]) throw new Error(lesson.id + " uses unknown file " + id);
     for (const step of lesson.steps) {
       if (step.source && !lesson.source.regions[step.source]) throw new Error(lesson.id + " uses unknown source region " + step.source);
     }
