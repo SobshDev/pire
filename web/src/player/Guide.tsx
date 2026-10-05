@@ -73,6 +73,7 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
             )}
             {step.figure && <Figure figure={step.figure} />}
             {step.diagram && <Diagram id={step.diagram} />}
+            {step.frame && <Frame frame={step.frame} />}
             <GateUI step={step} state={state} dispatch={dispatch} />
             <FeedbackBox state={state} step={step} dispatch={dispatch} />
             {step.hints.length > 0 && state.phase === "asking" && state.hintsShown < step.hints.length && (
@@ -362,12 +363,13 @@ function FillCard({ gate, state, dispatch }: { gate: Extract<Step["gate"], { typ
         const bad = state.unfilled.includes(f.id);
         const value = done ? (state.filled[f.id] ?? values[f.id] ?? f.answer) : (values[f.id] ?? "");
         const cls = cx(
-          "h-8 min-w-36 flex-[2] rounded-sm border bg-panel px-2 font-mono text-[12px] text-fg outline-none focus:border-amber-dim disabled:opacity-90",
+          "h-8 min-w-0 grow rounded-sm border bg-panel px-2 font-mono text-[12px] text-fg outline-none focus:border-amber-dim disabled:opacity-90",
           done ? "border-ok" : bad ? "border-bad" : "border-line",
         );
         return (
           <label key={f.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
             <span className="min-w-28 flex-1 text-muted">{f.label}</span>
+            <span className="flex min-w-36 flex-[2] items-center gap-2">
             {f.format === "choice" ? (
               <select aria-label={f.label} disabled={done} value={value} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))} className={cls}>
                 <option value="">Choose</option>
@@ -389,7 +391,8 @@ function FillCard({ gate, state, dispatch }: { gate: Extract<Step["gate"], { typ
                 className={cls}
               />
             )}
-            <span className={cx("w-3 text-xs", done ? "text-ok" : "text-bad")}>{done ? "✓" : bad ? "✕" : ""}</span>
+              <span className={cx("w-3 shrink-0 text-xs", done ? "text-ok" : "text-bad")}>{done ? "✓" : bad ? "✕" : ""}</span>
+            </span>
           </label>
         );
       })}
@@ -531,6 +534,34 @@ export function SourceCard({ lesson, region }: { lesson: Lesson; region: string 
           );
         })}
       </pre>
+    </div>
+  );
+}
+
+const FRAME_KIND: Record<string, string> = {
+  shadow: "border-[#5EB0EF]/50 bg-[#5EB0EF]/10 text-[#9CCDF5]",
+  ret: "border-amber-dim bg-[#1C160C] text-amber",
+  local: "border-[#7DD181]/50 bg-[#7DD181]/10 text-[#A9E3AC]",
+  arg: "border-[#B58CF0]/50 bg-[#B58CF0]/10 text-[#CDB3F5]",
+  saved: "border-[#E58A4E]/50 bg-[#E58A4E]/10 text-[#F0AE85]",
+  pad: "border-line bg-panel text-faint",
+  empty: "border-line border-dashed text-faint",
+};
+
+/** A stack frame, lowest address on top, like the stack pane. */
+function Frame({ frame }: { frame: NonNullable<Step["frame"]> }) {
+  return (
+    <div className="rounded-md border border-line bg-ink p-3 text-xs" data-testid="frame">
+      {frame.caption && <p className="mb-2 text-[11px] text-muted">{frame.caption}</p>}
+      <div className="flex flex-col gap-0.5">
+        {frame.rows.map((row) => (
+          <div key={row.at} className="flex items-center gap-2">
+            <span className="w-16 shrink-0 text-right font-mono text-[11px] text-muted">{row.at}</span>
+            <span className={cx("grow rounded-xs border px-2 py-0.5 text-[12px]/4.5", FRAME_KIND[row.kind])}>{row.label}</span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[10px] text-faint">Lowest address on top, like x64dbg's stack pane.</p>
     </div>
   );
 }

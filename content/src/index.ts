@@ -13,6 +13,7 @@ import { doubleClickToMain } from "./modules/m2/l4-double-click-to-main";
 import { usingAPeViewer } from "./modules/m2/l5-using-a-pe-viewer";
 import { passportControl } from "./modules/m2/challenge-passport-control";
 import { argumentsAndReturnValues } from "./modules/m3/l1-arguments-and-return-values";
+import { shadowSpaceAndAlignment } from "./modules/m3/l2-shadow-space-and-alignment";
 import { vaultRecordings } from "./specimens/vault";
 import { vault2Recordings } from "./specimens/vault2";
 import { callsRecordings } from "./specimens/calls";
@@ -60,7 +61,7 @@ export const lessons: Record<string, Lesson> = Object.fromEntries(
   [
     tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain, theVault,
     peLayout, threeKindsOfAddress, importsAndExports, doubleClickToMain, usingAPeViewer, passportControl,
-    argumentsAndReturnValues,
+    argumentsAndReturnValues, shadowSpaceAndAlignment,
   ].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];

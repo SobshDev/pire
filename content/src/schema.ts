@@ -238,6 +238,20 @@ export const Step = z.object({
     .optional(),
   /** A drawn explanation in the guide, such as "rulers" (file offset, RVA, VA side by side). */
   diagram: z.enum(["rulers", "alignment", "mapping", "timeline"]).optional(),
+  /** A stack frame drawn like x64dbg's stack pane: lowest address (RSP) at the top. */
+  frame: z
+    .object({
+      caption: z.string().optional(),
+      rows: z.array(
+        z.object({
+          /** Offset or address label, such as "rsp+20". */
+          at: z.string(),
+          label: z.string(),
+          kind: z.enum(["shadow", "ret", "local", "arg", "pad", "saved", "empty"]).default("local"),
+        }),
+      ),
+    })
+    .optional(),
   /** Hex viewer overlay entries (structure or field ids) shown once this step is answered, and after. */
   reveal: z.array(z.string()).default([]),
 });
