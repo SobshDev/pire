@@ -52,6 +52,7 @@ export function Registers({ callArgsLock }: { callArgsLock?: string }) {
             </Cell>
           ))}
         </div>
+        {state.regs.XMM0 !== undefined && <Xmm />}
         {callArgsLock ? (
           <Locked label="Call arguments" lesson={callArgsLock} className="mt-4 h-20 rounded-sm" />
         ) : (
@@ -92,4 +93,39 @@ function CallArgs() {
       })}
     </div>
   );
+}
+
+/** XMM registers, for programs that use floating point: the 128-bit value and what its low lane holds. */
+function Xmm() {
+  const view = useView();
+  const { state, prev } = view;
+  const names = Object.keys(state.regs).filter((r) => r.startsWith("XMM"));
+  return (
+    <div className="mt-2.5" data-testid="xmm">
+      {names.map((name) => {
+        const value = state.regs[name]!;
+        const was = prev.regs[name];
+        const lane = xmmLane(value);
+        return (
+          <Cell key={name} id={"reg:" + name} className="flex flex-col px-1 py-px">
+            <span className="flex h-4.25 items-center">
+              <span className="w-10 shrink-0 text-muted">{name}</span>
+              <span className={was !== undefined && was !== value ? "text-bad" : "text-fg"}>{value}</span>
+            </span>
+            {lane && <span className="pl-10 text-[11px]/4 text-comment">{lane}</span>}
+          </Cell>
+        );
+      })}
+    </div>
+  );
+}
+
+const LANE = new DataView(new ArrayBuffer(8));
+/** The low lane as a number: a double, or a float when only the low 32 bits are used. */
+export function xmmLane(value: string): string | null {
+  const low = BigInt("0x" + value.slice(-16));
+  if (low === 0n) return null;
+  LANE.setBigUint64(0, low, true);
+  if (low >> 32n === 0n) return "float " + LANE.getFloat32(0, true);
+  return "double " + LANE.getFloat64(0, true);
 }

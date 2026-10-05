@@ -12,8 +12,10 @@ import { importsAndExports } from "./modules/m2/l3-imports-and-exports";
 import { doubleClickToMain } from "./modules/m2/l4-double-click-to-main";
 import { usingAPeViewer } from "./modules/m2/l5-using-a-pe-viewer";
 import { passportControl } from "./modules/m2/challenge-passport-control";
+import { argumentsAndReturnValues } from "./modules/m3/l1-arguments-and-return-values";
 import { vaultRecordings } from "./specimens/vault";
 import { vault2Recordings } from "./specimens/vault2";
+import { callsRecordings } from "./specimens/calls";
 import { peFileFor } from "./specimens/msvc";
 import { vaultSpec } from "./specimens/vault/program";
 import { travelerA, travelerB, travelerC, user32 } from "./specimens/files";
@@ -27,7 +29,12 @@ export * from "./pe/build";
 /** Every recording lessons can use, by id. */
 export const recordings: Record<string, Recording> = Object.fromEntries(
   (() => {
-    return [vaultRecordings(), vault2Recordings()].flatMap((v) => [v.wrong, v.right, v.strippedWrong, v.strippedRight].map((r) => [r.id, r]));
+    const calls = callsRecordings();
+    return [
+      ...[vaultRecordings(), vault2Recordings()].flatMap((v) => [v.wrong, v.right, v.strippedWrong, v.strippedRight]),
+      calls.named,
+      calls.stripped,
+    ].map((r) => [r.id, r]);
   })(),
 );
 
@@ -53,6 +60,7 @@ export const lessons: Record<string, Lesson> = Object.fromEntries(
   [
     tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain, theVault,
     peLayout, threeKindsOfAddress, importsAndExports, doubleClickToMain, usingAPeViewer, passportControl,
+    argumentsAndReturnValues,
   ].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];

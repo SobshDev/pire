@@ -39,8 +39,21 @@ export function flagsFromRflags(rflags: Hex): Record<FlagName, 0 | 1> {
 
 type Operand = string | bigint | number;
 
+const F64 = new DataView(new ArrayBuffer(8));
+export const f64Bits = (x: number) => (F64.setFloat64(0, x, true), F64.getBigUint64(0, true));
+export const bitsF64 = (b: bigint) => (F64.setBigUint64(0, BigInt.asUintN(64, b), true), F64.getFloat64(0, true));
+export const f32Bits = (x: number) => (F64.setFloat32(0, x, true), BigInt(F64.getUint32(0, true)));
+export const bitsF32 = (b: bigint) => (F64.setUint32(0, Number(BigInt.asUintN(32, b)), true), F64.getFloat32(0, true));
+const LOW64 = 0xffffffffffffffffn;
+const LOW32 = 0xffffffffn;
+/** How many XMM registers a recording shows when its program uses floating point. */
+export const XMM_SHOWN = 6;
+
 export class Machine {
   regs: Record<string, bigint> = {};
+  /** 128-bit XMM registers. Only recorded when xmmOn is set. */
+  xmm: bigint[] = Array.from({ length: 16 }, () => 0n);
+  xmmOn = false;
   flags: Record<FlagName, 0 | 1> = { CF: 0, PF: 0, AF: 0, ZF: 0, SF: 0, TF: 0, IF: 1, DF: 0, OF: 0 };
   mem = new Map<bigint, number>();
   rip = 0n;
@@ -73,6 +86,27 @@ export class Machine {
   }
   val(x: Operand): bigint {
     return typeof x === "string" ? this.get(x) : BigInt(x);
+  }
+
+  /* floating point: scalar double (sd) and single (ss) lanes of XMM registers */
+  sd(i: number): number {
+    return bitsF64(this.xmm[i]! & LOW64);
+  }
+  ss(i: number): number {
+    return bitsF32(this.xmm[i]! & LOW32);
+  }
+  /** Writes the low double. fromMemory zeroes the rest, like movsd xmm, m64. */
+  setSd(i: number, x: number, fromMemory = false) {
+    this.xmm[i] = (fromMemory ? 0n : this.xmm[i]! & ~LOW64) | f64Bits(x);
+  }
+  setSs(i: number, x: number, fromMemory = false) {
+    this.xmm[i] = (fromMemory ? 0n : this.xmm[i]! & ~LOW32) | f32Bits(x);
+  }
+  ldF64(address: bigint): number {
+    return bitsF64(this.ld(address, 8));
+  }
+  ldF32(address: bigint): number {
+    return bitsF32(this.ld(address, 4));
   }
 
   /* memory */
@@ -225,7 +259,9 @@ export class Machine {
     return v;
   }
   snapshotRegs(): Record<string, Hex> {
-    return Object.fromEntries(REGS.map((r) => [r, hex(this.regs[r]!)]));
+    const regs: Record<string, Hex> = Object.fromEntries(REGS.map((r) => [r, hex(this.regs[r]!)]));
+    if (this.xmmOn) for (let i = 0; i < XMM_SHOWN; i++) regs["XMM" + i] = hex(this.xmm[i]!, 32);
+    return regs;
   }
 }
 
@@ -249,6 +285,8 @@ export interface Program {
   modules: ProgramModule[];
   symbols: SymbolInfo[];
   memory: MemoryRegion[];
+  /** Record XMM registers, for programs that use floating point. */
+  xmm?: boolean;
   /** Puts the machine in its state at the first recorded stop. */
   start(m: Machine): { event: string };
 }
@@ -339,6 +377,7 @@ export function record(program: Program, opts: { id: string; label: string; stdi
     (region.bytes ?? "").split(" ").filter(Boolean).forEach((b, i) => m.mem.set(big(region.base) + BigInt(i), Number.parseInt(b, 16)));
   }
   m.stdin = opts.stdin;
+  m.xmmOn = program.xmm ?? false;
   const { event: firstEvent } = program.start(m);
 
   const rows = new Map<bigint, { row: ProgramRow; next: bigint }>();

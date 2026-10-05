@@ -1,4 +1,4 @@
-import { assemble, big, bytesOf, hex, record, rel32, type AsmContext, type AsmRow, type Machine, type Program, type ProgramModule } from "../machine/machine";
+import { assemble, big, bitsF64, bytesOf, hex, record, rel32, type AsmContext, type AsmRow, type Machine, type Program, type ProgramModule } from "../machine/machine";
 import type { MemoryRegion, Recording, SymbolInfo } from "../machine/types";
 import { buildPe, type PeFile } from "../pe/build";
 
@@ -120,6 +120,14 @@ export interface AppSpec {
   globals: string[];
   /** The program's own code, from 140001000 up to printf at 140001110. Must define "main". */
   rows(h: Helpers): AsmRow[];
+  /** More code after the C runtime startup, from 140001230 on, for programs that don't fit below printf. */
+  tail?(h: Helpers): AsmRow[];
+  /** Constants in .rdata after the strings, such as MSVC's __real@3ff8000000000000 for 1.5. */
+  consts?: { at: bigint; bytes: number[]; name: string }[];
+  /** Functions that call nothing and touch no stack, so they get no .pdata entry. */
+  leaves?: string[];
+  /** Record XMM registers. */
+  xmm?: boolean;
 }
 
 function appModule(spec: AppSpec, { symbols }: Build): { module: ProgramModule; labels: Record<string, bigint> } {
@@ -244,6 +252,7 @@ function appModule(spec: AppSpec, { symbols }: Build): { module: ProgramModule; 
     },
     { org: 0x14000121fn, fill: true },
     { b: "CC", m: "int3" },
+    ...(spec.tail ? [{ org: 0x140001230n, fill: true } as AsmRow, ...spec.tail(h)] : []),
   ];
 
   const { rows: out, labels } = assemble(rows);
@@ -269,6 +278,23 @@ const LIB = {
   exit: 0x7ffe1a2d5f60n,
   MessageBoxA: 0x7ffe1c3d8f10n,
 } as const satisfies Record<Import, bigint>;
+
+/** printf's formatting, for %d, %lld, %s, and %f. Each argument takes one 8-byte va_list slot. */
+function format(m: Machine, fmt: string, va: bigint): string {
+  let at = va;
+  const next = () => {
+    const v = m.ld(at, 8);
+    at += 8n;
+    return v;
+  };
+  return fmt.replace(/%(lld|d|s|f)/g, (_, k: string) => {
+    const v = next();
+    if (k === "d") return String(BigInt.asIntN(32, v));
+    if (k === "lld") return String(BigInt.asIntN(64, v));
+    if (k === "s") return m.cstr(v);
+    return bitsF64(v).toFixed(6);
+  });
+}
 
 /** A short function body: reserve stack, do the work, restore, return. */
 function body(name: Import, work: AsmRow[], frame = 0x28): AsmRow[] {
@@ -317,7 +343,8 @@ function ucrtModule(): ProgramModule {
       {
         b: "49:8BC0", m: "mov", o: "rax,r8",
         run: (m) => {
-          const s = m.cstr(m.get("r8"));
+          // The va_list is the fifth argument: past the return address and this body's 48h frame.
+          const s = format(m, m.cstr(m.get("r8")), m.ld(m.sp(0x48 + 8 + 0x20), 8));
           m.print(s);
           m.clobber(4);
           m.set("eax", s.length);
@@ -439,6 +466,7 @@ export function loadedAddress(name: string): bigint {
 function stringsRegion(spec: AppSpec): string {
   const bytes = new Array<number>(0x80).fill(0);
   for (const [a, s] of spec.strings) [...s].forEach((ch, i) => (bytes[Number(a - STRINGS_BASE) + i] = ch.charCodeAt(0)));
+  for (const c of spec.consts ?? []) c.bytes.forEach((b, i) => (bytes[Number(c.at - STRINGS_BASE) + i] = b));
   return bytes.map((b) => hex(b, 2)).join(" ");
 }
 
@@ -465,6 +493,7 @@ function symbolTable(spec: AppSpec, labels: Record<string, bigint>, build: Build
     ? [
         ...[...spec.functions, ...CRT_FUNCTIONS].map((name): SymbolInfo => ({ name, address: hex(labels[name]!), module, kind: "function" })),
         ...spec.globals.map((name): SymbolInfo => ({ name, address: hex(spec.data[name]!), module, kind: "data" })),
+        ...(spec.consts ?? []).map((c): SymbolInfo => ({ name: c.name, address: hex(c.at), module, kind: "data" })),
         { name: "__security_cookie", address: hex(CRT_DATA.__security_cookie), module, kind: "data" },
       ]
     : [];
@@ -494,6 +523,7 @@ export function buildProgram(spec: AppSpec, build: Build): Program & { labels: R
   const { module: app, labels } = appModule(spec, build);
   return {
     labels,
+    ...(spec.xmm ? { xmm: true } : {}),
     modules: [
       app,
       ucrtModule(),
@@ -550,6 +580,26 @@ export function recordSpecimen(spec: AppSpec, input: { wrong: string; right: str
   };
 }
 
+export interface ProgramRecordings {
+  named: Recording;
+  stripped: Recording;
+  at: Record<string, string>;
+}
+
+/** Records a program that reads no input: one run with the PDB and one without. */
+export function recordProgram(spec: AppSpec): ProgramRecordings {
+  const named = buildProgram(spec, { symbols: true });
+  const stripped = buildProgram(spec, { symbols: false });
+  const exe = spec.exe + ".exe";
+  const process = { name: exe, pid: "3A44", tid: "2B10" };
+  const extras = loaderView(spec, named.labels.mainCRTStartup!);
+  return {
+    named: { ...record(named, { id: spec.exe, label: exe, stdin: "", process }), ...extras },
+    stripped: { ...record(stripped, { id: spec.exe + "-stripped", label: exe + " without PDB", stdin: "", process }), ...extras },
+    at: Object.fromEntries(Object.entries(named.labels).map(([k, v]) => [k, hex(v)])),
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* The file on disk                                                    */
 /* ------------------------------------------------------------------ */
@@ -588,15 +638,17 @@ function buildPeFile(spec: AppSpec, opts: { aslr: boolean }): PeFile {
 
   const rdata: number[] = new Array(0x1400).fill(0);
   for (const [a, s] of spec.strings) [...s].forEach((ch, i) => (rdata[rva(a) - 0x2000 + i] = ch.charCodeAt(0)));
+  for (const c of spec.consts ?? []) c.bytes.forEach((b, i) => (rdata[rva(c.at) - 0x2000 + i] = b));
 
   // One RUNTIME_FUNCTION per non-leaf function, each pointing at a small UNWIND_INFO in .rdata.
   const starts = [...spec.functions, "printf", "__scrt_common_main_seh", "mainCRTStartup"]
+    .filter((n) => !spec.leaves?.includes(n))
     .map((n) => program.labels[n]!)
     .sort((a, b) => (a < b ? -1 : 1));
   const pdata: number[] = [];
   const le = (out: number[], off: number, v: number) => [0, 1, 2, 3].forEach((i) => (out[off + i] = (v >>> (8 * i)) & 0xff));
   starts.forEach((start, i) => {
-    const next = starts[i + 1] ?? 0x140001220n;
+    const next = starts[i + 1] ?? 0x140002000n;
     const end = app.rows.find((r) => big(r.address) > start && (big(r.address) >= next || r.mnemonic === "int3"))?.address;
     const unwind = UNWIND_AT + i * 8;
     [0x01, 0x04, 0x01, 0x00, 0x04, 0x42, 0x00, 0x00].forEach((b, k) => (rdata[unwind - 0x2000 + k] = b));
