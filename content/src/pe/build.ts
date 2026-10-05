@@ -181,7 +181,8 @@ function layoutImports(spec: PeSpec, sec: (rva: number) => PeSectionSpec): PeImp
     const s = sec(rva);
     const off = rva - s.va;
     while (s.bytes.length < off + size) s.bytes.push(0);
-    for (let i = 0; i < size; i++) s.bytes[off + i] = (v >>> (8 * i)) & 0xff;
+    // Values here are 32-bit RVAs; the upper half of a 64-bit thunk is zero.
+    for (let i = 0; i < size; i++) s.bytes[off + i] = i < 4 ? (v >>> (8 * i)) & 0xff : 0;
   };
   const putBytes = (rva: number, bytes: number[]) => bytes.forEach((b, i) => put(rva + i, 1, b));
   const dir = spec.importAt.dir;

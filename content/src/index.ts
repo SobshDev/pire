@@ -8,6 +8,7 @@ import { gettingToMain } from "./modules/m1/l5-getting-to-main";
 import { theVault } from "./modules/m1/challenge-the-vault";
 import { peLayout } from "./modules/m2/l1-pe-layout";
 import { threeKindsOfAddress } from "./modules/m2/l2-three-kinds-of-address";
+import { importsAndExports } from "./modules/m2/l3-imports-and-exports";
 import { vaultRecordings } from "./specimens/vault";
 import { vault2Recordings } from "./specimens/vault2";
 import { peFileFor } from "./specimens/msvc";
@@ -46,7 +47,7 @@ export function getFile(id: string): PeFile {
 
 /** Every playable lesson, validated when the module loads so bad content fails fast. */
 export const lessons: Record<string, Lesson> = Object.fromEntries(
-  [tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain, theVault, peLayout, threeKindsOfAddress].map((input) => {
+  [tourOfTheInterface, controllingExecution, breakpoints, followingValues, gettingToMain, theVault, peLayout, threeKindsOfAddress, importsAndExports].map((input) => {
     const lesson = Lesson.parse(input);
     const used = [lesson.recording, ...lesson.steps.flatMap((s) => (s.setup?.recording ? [s.setup.recording] : []))];
     for (const id of used) if (!recordings[id]) throw new Error(lesson.id + " uses unknown recording " + id);

@@ -91,8 +91,8 @@ export function Player({ lesson, resume }: { lesson: Lesson; resume?: Resume }) 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.altKey) return;
-      // Function keys work from anywhere, like x64dbg's global shortcuts; other keys belong to the text box.
-      const fKey = /^F([1-9]|1[0-2])$/.test(e.key);
+      // Function keys and Ctrl+G work from anywhere, like the real tools' global shortcuts; other keys belong to the text box.
+      const fKey = /^F([1-9]|1[0-2])$/.test(e.key) || (e.ctrlKey && e.key.toLowerCase() === "g");
       if (isTyping(e.target) && !fKey) return;
       const key = keyName(e);
       if (!key) return;

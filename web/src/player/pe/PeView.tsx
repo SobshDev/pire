@@ -80,7 +80,7 @@ function TabButton({ id, label, active }: { id: string; label: string; active: b
   );
 }
 
-const th = "sticky top-0 z-10 bg-panel px-3 py-1 text-left font-normal text-faint";
+const th = "sticky top-0 z-10 bg-panel px-3 py-1 text-left font-normal whitespace-nowrap text-faint";
 
 function Fields({ node }: { node: string }) {
   const view = useView();
@@ -371,4 +371,3 @@ function PeHex({ node }: { node: string }) {
 }
 
 export { hexOff };
-
