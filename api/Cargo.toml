@@ -2,6 +2,8 @@
 name = "pire-api"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+repository = "https://github.com/SobshDev/pire"
 default-run = "pire-api"
 
 [lib]

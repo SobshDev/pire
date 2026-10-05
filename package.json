@@ -1,6 +1,7 @@
 {
   "name": "pire",
   "private": true,
+  "license": "MIT",
   "workspaces": ["web", "content"],
   "scripts": {
     "dev": "bun run --cwd web dev",

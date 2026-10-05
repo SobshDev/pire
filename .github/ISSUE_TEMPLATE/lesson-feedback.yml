@@ -1,0 +1,29 @@
+name: Lesson feedback
+description: A confusing step, a mistake in the text, or a wrong value in a lesson.
+labels: ["lesson"]
+body:
+  - type: input
+    id: lesson
+    attributes:
+      label: Lesson
+      description: The lesson id, such as m1.l2. The "Suggest a fix" link at the end of a lesson fills this in.
+      placeholder: m1.l2
+    validations:
+      required: true
+  - type: input
+    id: step
+    attributes:
+      label: Step
+      description: The step title or number, if you know it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or confusing?
+      description: Quote the text if you can, and say what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix
+      description: Optional. Wording, a better hint, or the correct value.
