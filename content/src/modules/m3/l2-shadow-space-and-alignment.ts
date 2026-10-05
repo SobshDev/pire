@@ -1,12 +1,12 @@
 import type { LessonInput } from "../../schema";
-import { calls, callsRecordings, callsSource } from "../../specimens/calls";
+import { calls, callsRecordings, callsSource, type CallsLabel } from "../../specimens/calls";
 
 const hx = (n: bigint) => n.toString(16).toUpperCase().padStart(16, "0");
 const rec = callsRecordings().named;
-const rspAt = (label: string) => BigInt("0x" + rec.states.find((s) => s.rip === calls[label])!.regs.RSP);
+const rspAt = (label: CallsLabel) => BigInt("0x" + rec.states.find((s) => s.rip === calls[label])!.regs.RSP);
 const atAdd = rspAt("main.add");
 const stack = (base: bigint, off: number) => "stack:" + hx(base + BigInt(off));
-const d = (label: string) => "disasm:" + calls[label];
+const d = (label: CallsLabel) => "disasm:" + calls[label];
 const SLOTS = ["Shadow space for add", "doubled", "Padding", "Return address to main", "x, in scale's home slot"];
 
 /** Lesson 3.2, designed in docs/lessons/03-functions-and-the-x64-calling-convention/02-shadow-space-and-stack-alignment.md. */

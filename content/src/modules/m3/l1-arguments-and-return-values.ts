@@ -1,11 +1,11 @@
 import type { LessonInput } from "../../schema";
-import { calls, callsRecordings, callsSource } from "../../specimens/calls";
+import { calls, callsRecordings, callsSource, type CallsLabel } from "../../specimens/calls";
 
 const hx = (n: bigint) => n.toString(16).toUpperCase().padStart(16, "0");
 const rec = callsRecordings().named;
-const rspAt = (label: string) => BigInt("0x" + rec.states.find((s) => s.rip === calls[label])!.regs.RSP);
+const rspAt = (label: CallsLabel) => BigInt("0x" + rec.states.find((s) => s.rip === calls[label])!.regs.RSP);
 const sum6Rsp = rspAt("main.sum6");
-const d = (label: string) => "disasm:" + calls[label];
+const d = (label: CallsLabel) => "disasm:" + calls[label];
 
 /** Lesson 3.1, designed in docs/lessons/03-functions-and-the-x64-calling-convention/01-arguments-and-return-values.md. */
 export const argumentsAndReturnValues: LessonInput = {

@@ -33,7 +33,7 @@ describe("lesson 3.1", () => {
     s = run(s, click("disasm:" + calls["add.load"]));
     expect(s.lesson.feedback?.tone).toBe("wrong");
     s = run(s, click("disasm:" + calls["add.add"]), go);
-    for (const l of ["a", "b", "c", "d"]) s = run(s, click("disasm:" + calls["main.sum6." + l]));
+    for (const l of ["a", "b", "c", "d"]) s = run(s, click("disasm:" + calls[("main.sum6." + l) as "main.sum6.a"]));
     s = run(s, go, click("disasm:" + calls["main.sum6.e"]), click("disasm:" + calls["main.sum6.f"]), go);
     s = run(s, click("stack:000000000014FE90"), click("stack:000000000014FE98"), go, key("F8"));
     expect(stateOf(rec, s.session).regs.RAX).toBe("0000000000000013");

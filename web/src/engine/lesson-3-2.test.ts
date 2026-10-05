@@ -13,7 +13,7 @@ const SLOTS = ["Shadow space for add", "doubled", "Padding", "Return address to 
 
 describe("lesson 3.2", () => {
   it("tells the truth about the frames", () => {
-    const at = (l: string) => rec.states.find((x) => x.rip === calls[l])!;
+    const at = (l: keyof typeof calls) => rec.states.find((x) => x.rip === calls[l])!;
     expect(at("main.add").regs.RSP!.endsWith("0")).toBe(true);
     expect(at("add").regs.RSP!.endsWith("8")).toBe(true);
     expect(at("scale").regs.RSP!.endsWith("8")).toBe(true);
