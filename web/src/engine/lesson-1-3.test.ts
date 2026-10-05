@@ -42,8 +42,24 @@ describe("lesson 1.3", () => {
 
     s = step(s, go, { type: "choose", id: "first" }, go);
     expect(s.session.recording).toBe("vault.wrong");
+    // Ctrl+G with a disassembly line selected follows in the disassembler, which doesn't finish the step.
+    s = step(s, key("Ctrl+G", "disasm:" + vault.main));
+    expect(s.session.goto).toBe("disassembly");
+    s = step(s, { type: "command", surface: "goto", text: "g_attempts" });
+    expect(s.lesson.phase).toBe("asking");
+    expect(s.session.goto).toBeNull();
+    expect(s.session.dump).toBe("0000000140003200");
+    expect(s.lesson.feedback?.text).toMatch(/Click a byte in the dump/);
     s = step(s, key("Ctrl+G", "dump:byte:0000000140003200"));
     expect(s.session.goto).toBe("dump");
+    s = step(s, { type: "command", surface: "goto", text: "g_attempts" });
+    expect(s.session.dump).toBe(sym.g_attempts);
+
+    // Ctrl+G keeps working after the step, so a wrong jump can be fixed.
+    s = step(s, key("Ctrl+G", "dump:byte:" + sym.g_attempts));
+    s = step(s, { type: "command", surface: "goto", text: "0000000140003200" });
+    expect(s.session.dump).toBe("0000000140003200");
+    s = step(s, key("Ctrl+G", "dump:byte:0000000140003200"));
     s = step(s, { type: "command", surface: "goto", text: "g_attempts" });
     expect(s.session.dump).toBe(sym.g_attempts);
 

@@ -848,6 +848,7 @@
     "gate": {
      "type": "command",
      "surface": "goto",
+     "pane": "dump",
      "accept": [
       "g_attempts",
       "vault.g_attempts",
