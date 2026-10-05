@@ -21,6 +21,8 @@ RUN mkdir -p src/bin && echo "fn main() {}" > src/main.rs && echo "fn main() {}"
     && rm -rf src
 COPY api/src src
 COPY api/migrations migrations
+# The tutor's copy of the lessons, embedded at compile time (bun run export:tutor).
+COPY api/tutor tutor
 RUN touch src/main.rs src/lib.rs && cargo build --release --bin pire-api
 
 # 3. Runtime

@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useSaveProgress } from "../api/queries";
 import { bestMedal, DEBUG_KEYS, initialState, medal, reduce, revealed, toolOf, type Medal, type PlayerEvent, type PlayerState, type Resume } from "../engine/lesson";
-import { Keycap, Logo } from "../ui/bits";
+import { cx, Keycap, Logo } from "../ui/bits";
 import { Completion } from "./Completion";
 import { CommandBar, StatusBar, WindowChrome } from "./debugger/Chrome";
 import { Disassembly, type DisassemblyHandle } from "./debugger/Disassembly";
@@ -18,6 +18,8 @@ import { ChipBody, Guide } from "./Guide";
 import { HexView, Inspector } from "./hex/HexView";
 import { PeView } from "./pe/PeView";
 import { ToolChrome } from "./ToolChrome";
+import { Tutor } from "./Tutor";
+import type { TutorContext } from "./tutorTools";
 import { parseSpotlight, useView as useContextView, ViewContext, type View } from "./view";
 
 type Action = PlayerEvent | { type: "reset" };
@@ -43,7 +45,10 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
   );
   const [selected, setSelected] = useState<string | null>(null);
   const [sourceOpen, setSourceOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const [rail, setRail] = useState<"guide" | "ask">("guide");
+  const [askOpened, setAskOpened] = useState(false);
+  const [tutorPoints, setTutorPoints] = useState<ReadonlySet<string>>(new Set());
+  const [prefill, setPrefill] = useState<{ text: string; n: number } | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ target: string; x: number; y: number } | null>(null);
   const disasm = useRef<DisassemblyHandle>(null);
@@ -55,11 +60,41 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
   const file = fileId ? getFile(fileId) : null;
   const found = useMemo(() => revealed(lesson, ls), [lesson, ls]);
 
+  // Misses on the current step: the lesson counts mistakes across the whole lesson.
+  const stepStart = useRef({ step: ls.stepIndex, mistakes: ls.mistakes });
+  if (stepStart.current.step !== ls.stepIndex) stepStart.current = { step: ls.stepIndex, mistakes: ls.mistakes };
+  const misses = ls.mistakes - stepStart.current.mistakes;
+
+  useEffect(() => {
+    if (rail === "ask") setAskOpened(true);
+  }, [rail]);
+  // What the tutor pointed at belongs to the step it was asked about.
+  useEffect(() => setTutorPoints(new Set()), [ls.stepIndex]);
+
   // Save after every step change. The first render is the state we just loaded.
   const save = useSaveProgress(lesson.id);
   const loaded = useRef(true);
   const latest = useRef(state);
   latest.current = state;
+  const missesRef = useRef(misses);
+  missesRef.current = misses;
+  const tutorContext = useCallback(
+    (): TutorContext => ({
+      lesson,
+      state: latest.current.lesson,
+      rec: getRecording(latest.current.session.recording),
+      session: latest.current.session,
+      misses: missesRef.current,
+      point(target) {
+        setTutorPoints((s) => new Set(s).add(target));
+        const el = document.querySelector("[data-target='" + CSS.escape(target) + "']");
+        requestAnimationFrame(() => el?.scrollIntoView({ block: "nearest" }));
+        return !!el;
+      },
+      showSource: () => setSourceOpen(true),
+    }),
+    [lesson],
+  );
   // The best medal so far, kept across replays in this visit too.
   const best = useRef(earned);
   useEffect(() => {
@@ -114,9 +149,9 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
       } else if (key === "S" && !lesson.challenge) {
         setSourceOpen((o) => !o);
       } else if (key === "?") {
-        setHelpOpen((o) => !o);
+        setRail("ask");
       } else if (key === "Escape") {
-        setHelpOpen(false);
+        setRail("guide");
       }
     };
     window.addEventListener("keydown", onKey);
@@ -139,6 +174,7 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
       ...spot,
       highlights: new Set(ls.phase === "success" ? (step?.successHighlights ?? []) : []),
       pulse: new Set(ls.phase === "asking" ? (step?.pulse ?? []) : []),
+      tutor: tutorPoints,
       selected,
       matching,
       placed: ls.placed,
@@ -161,7 +197,7 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
       locks: lesson.locks,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rec, session, spot.spotPane, spot.spotPart, ls.phase, ls.placed, step, selected, matching, blocked, file, found],
+    [rec, session, spot.spotPane, spot.spotPart, ls.phase, ls.placed, step, selected, matching, blocked, file, found, tutorPoints],
   );
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor));
@@ -211,16 +247,6 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
                   Source <Keycap small>S</Keycap>
                 </button>
               )}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setHelpOpen((o) => !o)}
-                  className="flex h-7 items-center gap-1.5 rounded-md border border-amber-line px-2.5 text-xs text-fg hover:border-amber-dim"
-                >
-                  <span className="font-mono text-amber">?</span> Help
-                </button>
-                {helpOpen && <Help />}
-              </div>
             </header>
 
             <div className="flex min-h-0 grow">
@@ -266,7 +292,41 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
                   />
                 )}
               </div>
-              <Guide lesson={lesson} state={ls} dispatch={dispatch} sourceOpen={sourceOpen} />
+              <div className="flex w-85 shrink-0 flex-col border-l border-amber-line bg-guide">
+                <div role="tablist" aria-label="Guide or tutor" className="flex h-10 shrink-0 border-b border-amber-line">
+                  <RailTab active={rail === "guide"} onClick={() => setRail("guide")} align="left">
+                    Guide
+                  </RailTab>
+                  <RailTab active={rail === "ask"} onClick={() => setRail("ask")} align="right">
+                    Ask
+                  </RailTab>
+                </div>
+                <div className={cx("flex min-h-0 grow flex-col", rail !== "guide" && "hidden")}>
+                  <Guide
+                    lesson={lesson}
+                    state={ls}
+                    dispatch={dispatch}
+                    sourceOpen={sourceOpen}
+                    misses={misses}
+                    onTalk={() => {
+                      setRail("ask");
+                      setPrefill({ text: "I've missed this three times. Can you talk me through it?", n: Date.now() });
+                    }}
+                  />
+                </div>
+                {askOpened && (
+                  <div className={cx("flex min-h-0 grow flex-col", rail !== "ask" && "hidden")}>
+                    <Tutor
+                      lesson={lesson}
+                      context={tutorContext}
+                      prefill={prefill}
+                      active={rail === "ask"}
+                      onAsk={() => setTutorPoints(new Set())}
+                      onGuide={() => setRail("guide")}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {menu && (
@@ -309,20 +369,21 @@ function InfoLines() {
 }
 
 
-function Help() {
+/** Guide | Ask: the two halves of the rail's tab bar, each label hugging its outer edge. */
+function RailTab({ active, onClick, align, children }: { active: boolean; onClick(): void; align: "left" | "right"; children: string }) {
   return (
-    <div className="absolute top-9 right-0 z-50 w-80 rounded-lg border border-amber-line bg-guide p-4 text-[13px]/5 text-muted shadow-2xl">
-      <p className="text-fg">How lessons work</p>
-      <p className="mt-1.5">
-        The guide on the right tells you what to look at. Click, right-click, type, or press keys in the debugger to
-        answer. Wrong answers just get a nudge.
-      </p>
-      <ul className="mt-3 flex flex-col gap-1.5">
-        <li className="flex items-center gap-2"><Keycap small>↵</Keycap> continue</li>
-        <li className="flex items-center gap-2"><Keycap small>S</Keycap> show the C source</li>
-        <li className="flex items-center gap-2"><Keycap small>?</Keycap> this help</li>
-      </ul>
-      <p className="mt-3 text-xs text-faint">Debugger keys work like x64dbg once a lesson has taught them.</p>
-    </div>
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cx(
+        "-mb-px flex flex-1 items-center border-b-2 px-5 text-[13px] font-medium transition-colors",
+        align === "left" ? "justify-start" : "justify-end",
+        active ? "border-amber bg-[#1E180E] text-fg" : "border-transparent text-muted hover:text-fg",
+      )}
+    >
+      {children}
+    </button>
   );
 }

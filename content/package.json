@@ -5,7 +5,8 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "export:tutor": "bun scripts/export-tutor.ts"
   },
   "dependencies": {
     "zod": "^4"

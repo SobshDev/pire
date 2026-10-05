@@ -18,6 +18,12 @@ pub enum ApiError {
     Conflict(String),
     #[error("Not found.")]
     NotFound,
+    /// A dependency is down or full, such as the tutor's model server.
+    #[error("{0}")]
+    Unavailable(String),
+    /// The model server answered with an error. The detail is logged, never shown.
+    #[error("{0}")]
+    BadGateway(String),
     #[error("internal error: {0}")]
     Internal(String),
 }
@@ -34,12 +40,18 @@ impl IntoResponse for ApiError {
             ApiError::Unauthorized | ApiError::InvalidCredentials(_) => StatusCode::UNAUTHORIZED,
             ApiError::Conflict(_) => StatusCode::CONFLICT,
             ApiError::NotFound => StatusCode::NOT_FOUND,
+            ApiError::Unavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
+            ApiError::BadGateway(_) => StatusCode::BAD_GATEWAY,
             ApiError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let message = match &self {
             ApiError::Internal(detail) => {
                 tracing::error!(%detail, "request failed");
                 "Something went wrong on our side.".to_string()
+            }
+            ApiError::BadGateway(detail) => {
+                tracing::error!(%detail, "tutor model request failed");
+                "The tutor couldn't answer. Try again.".to_string()
             }
             other => other.to_string(),
         };

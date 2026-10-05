@@ -12,12 +12,16 @@ interface GuideProps {
   state: LessonState;
   dispatch(event: PlayerEvent): void;
   sourceOpen: boolean;
+  /** Wrong answers on the current step. */
+  misses: number;
+  /** Open the Ask tab to talk the step through with the tutor. */
+  onTalk(): void;
 }
 
-export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
-  if (lesson.challenge) return <ChallengeGuide lesson={lesson} state={state} dispatch={dispatch} />;
+export function Guide({ lesson, state, dispatch, sourceOpen, misses, onTalk }: GuideProps) {
+  if (lesson.challenge) return <ChallengeGuide lesson={lesson} state={state} dispatch={dispatch} misses={misses} onTalk={onTalk} />;
   const step = lesson.steps[state.stepIndex];
-  if (!step) return <aside className="w-85 shrink-0 border-l border-amber-line bg-guide" />;
+  if (!step) return <aside className="min-h-0 grow bg-guide" />;
 
   const sameSection = lesson.steps.filter((s) => s.section === step.section);
   const position = lesson.steps.slice(0, state.stepIndex + 1).filter((s) => s.section === step.section).length;
@@ -25,7 +29,7 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
   const sourceRegion = step.source ?? (sourceOpen ? "" : undefined);
 
   return (
-    <aside className="flex w-85 shrink-0 flex-col border-l border-amber-line bg-guide" aria-label="Guide">
+    <aside className="flex min-h-0 grow flex-col bg-guide" aria-label="Guide">
       <div className="shrink-0 px-5 pt-4">
         <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.12em] uppercase">
           <span className="text-amber" data-testid="guide-kicker">{kicker}</span>
@@ -85,6 +89,7 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
             {step.frame && <Frame frame={step.frame} />}
             <GateUI step={step} state={state} dispatch={dispatch} />
             <FeedbackBox state={state} step={step} dispatch={dispatch} />
+            <TalkCard key={state.stepIndex} show={misses >= 3 && state.phase === "asking"} onTalk={onTalk} />
             {step.hints.length > 0 && state.phase === "asking" && state.hintsShown < step.hints.length && (
               <button
                 type="button"
@@ -114,12 +119,12 @@ export function Guide({ lesson, state, dispatch, sourceOpen }: GuideProps) {
 const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 1009, 7);
 
 /** Challenges: the goal list, the current goal's answer box, and a shared pool of hint tokens. */
-function ChallengeGuide({ lesson, state, dispatch }: Omit<GuideProps, "sourceOpen">) {
+function ChallengeGuide({ lesson, state, dispatch, misses, onTalk }: Omit<GuideProps, "sourceOpen">) {
   const step = lesson.steps[state.stepIndex];
   const tokensLeft = lesson.hintTokens - state.hintsUsed;
   const revealed = step ? step.hints.slice(0, state.hintsShown) : [];
   return (
-    <aside className="flex w-85 shrink-0 flex-col border-l border-amber-line bg-guide" aria-label="Guide">
+    <aside className="flex min-h-0 grow flex-col bg-guide" aria-label="Guide">
       <div className="shrink-0 px-5 pt-4">
         <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.12em] uppercase">
           <span className="text-amber" data-testid="guide-kicker">Challenge · no guide</span>
@@ -169,6 +174,7 @@ function ChallengeGuide({ lesson, state, dispatch }: Omit<GuideProps, "sourceOpe
                     <GateUI step={s} state={state} dispatch={dispatch} />
                     {/* Hints show in the list below, so the feedback box only carries answers and nudges. */}
                     {(state.phase === "success" || state.feedback?.tone !== "hint") && <FeedbackBox state={state} step={s} dispatch={dispatch} />}
+                    <TalkCard key={state.stepIndex} show={misses >= 3 && state.phase === "asking"} onTalk={onTalk} />
                     {revealed.map((h, n) => (
                       <Box key={h} tone="hint" title={["Nudge", "Pointer", "Answer"][n] ?? "Hint"}>
                         <Rich text={h} />
@@ -590,5 +596,23 @@ function Frame({ frame }: { frame: NonNullable<Step["frame"]> }) {
       </div>
       <p className="mt-2 text-[10px] text-faint">Lowest address on top, like x64dbg's stack pane.</p>
     </div>
+  );
+}
+
+/** After three misses on a step, offer to talk it through with the tutor. */
+function TalkCard({ show, onTalk }: { show: boolean; onTalk(): void }) {
+  const [dismissed, setDismissed] = useState(false);
+  if (!show || dismissed) return null;
+  return (
+    <Box tone="info" title="Three misses. Want to talk it through?">
+      <div className="mt-2 flex items-center gap-4">
+        <button type="button" onClick={onTalk} className={primary}>
+          Talk it through
+        </button>
+        <button type="button" onClick={() => setDismissed(true)} className="text-[13px] text-muted hover:text-fg">
+          Try again
+        </button>
+      </div>
+    </Box>
   );
 }
