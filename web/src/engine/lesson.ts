@@ -53,6 +53,8 @@ export type PlayerEvent =
   | { type: "click"; target: string }
   | { type: "dblclick"; target: string }
   | { type: "key"; key: string; ripOffscreen: boolean; selected: string | null }
+  /** A key the debugger doesn't use, such as 8 or X. Only a key step reacts, to say what it wants. */
+  | { type: "strayKey"; key: string }
   | { type: "predict"; value: string }
   | { type: "choose"; id: string }
   | { type: "drop"; label: string; pane: string }
@@ -459,6 +461,11 @@ export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): 
     state = { ...state, session: viewClick(state.session, event.target) };
   }
   if (!step || l.done) return state;
+
+  if (event.type === "strayKey") {
+    if (l.phase !== "asking" || step.free || step.gate.type !== "key") return state;
+    return info(state, "That was " + event.key + ". This step needs " + step.gate.key + ".");
+  }
 
   // The hex viewer's Ctrl+G always works once the dialog exists, like in a real hex editor.
   const gotoGate = step.gate.type === "command" && step.gate.surface === "goto";

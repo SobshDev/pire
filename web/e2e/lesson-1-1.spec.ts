@@ -75,8 +75,13 @@ test("a new learner signs up and finishes lesson 1.1", async ({ page }) => {
   // Beat 9: * does nothing useful until RIP is scrolled away.
   await page.keyboard.press("*");
   await expect(guide(page)).toContainText("Scroll the disassembly first");
-  await page.getByTestId("disasm-scroll").evaluate((el) => (el.scrollTop = el.scrollHeight));
-  await page.keyboard.press("*");
+  // Like a learner: a stray key gets an explanation, then scroll with the wheel and press Shift+8.
+  await page.keyboard.press("x");
+  await expect(guide(page)).toContainText("This step needs *");
+  await page.getByTestId("disasm-scroll").hover();
+  await page.mouse.wheel(0, 2000);
+  await expect(target(page, "disasm:0000000140001070")).not.toBeInViewport();
+  await page.keyboard.press("Shift+8");
   await expect(guide(page)).toContainText("first key");
   await expect(target(page, "disasm:0000000140001070")).toBeInViewport();
   await proceed(page);
