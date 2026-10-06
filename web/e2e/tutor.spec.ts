@@ -50,3 +50,29 @@ test("the Ask tab answers, points at the debugger, and keeps the chat", async ({
   await page.getByLabel("Ask the tutor").press("Escape");
   await expect(page.getByRole("tab", { name: "Guide" })).toHaveAttribute("aria-selected", "true");
 });
+
+/** The chat can move to its own window for a second screen and still drive the debugger in the lesson tab. */
+test("the chat pops out into its own window and comes back", async ({ page, request }) => {
+  const status = (await (await request.get("/api/tutor/status")).json()) as { enabled: boolean };
+  await startLesson(page, "m1.l2");
+  const [chat] = await Promise.all([page.waitForEvent("popup"), page.getByRole("button", { name: "Open the chat in its own window" }).click()]);
+  await expect(chat).toHaveTitle(/^Ask · /);
+  await expect(page.getByRole("tab", { name: "Guide" })).toHaveAttribute("aria-selected", "true");
+
+  if (status.enabled) {
+    await chat.getByRole("button", { name: "What changed?" }).click();
+    await expect(chat.getByTestId("tutor-answer").last()).toContainText("put the banner's address there");
+    // The tutor in the window points at the debugger in the lesson tab.
+    await expect(target(page, "reg:RCX")).toHaveClass(/tutor-point/);
+    // Typing in the chat stays in the chat: S doesn't open the source.
+    await chat.getByLabel("Ask the tutor").pressSequentially("Si");
+    await expect(page.locator("header").getByRole("button", { name: /^Source/ })).toHaveAttribute("aria-pressed", "false");
+  } else {
+    await expect(chat.getByTestId("tutor-offline")).toBeVisible();
+  }
+
+  await chat.getByRole("button", { name: "Back to the lesson" }).click();
+  await expect(page.getByRole("tab", { name: "Ask" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId(status.enabled ? "tutor" : "tutor-offline")).toBeVisible();
+  if (status.enabled) await expect(page.getByTestId("tutor-answer").last()).toContainText("put the banner's address there");
+});

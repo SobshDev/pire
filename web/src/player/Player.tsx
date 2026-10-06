@@ -1,7 +1,8 @@
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { catalog, getFile, getRecording, type Lesson, type PaneId } from "@pire/content";
 import { Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSaveProgress } from "../api/queries";
 import { bestMedal, DEBUG_KEYS, initialState, medal, reduce, revealed, toolOf, type Medal, type PlayerEvent, type PlayerState, type Resume } from "../engine/lesson";
 import { cx, GearIcon, IS_MAC, Keycap, Logo } from "../ui/bits";
@@ -17,6 +18,7 @@ import { Stack } from "./debugger/Stack";
 import { TabView } from "./debugger/TabView";
 import { ChipBody, Guide } from "./Guide";
 import { HexView, Inspector } from "./hex/HexView";
+import { usePanelWindow } from "./panelWindow";
 import { PeView } from "./pe/PeView";
 import { ToolChrome } from "./ToolChrome";
 import { Tutor } from "./Tutor";
@@ -25,8 +27,11 @@ import { parseSpotlight, useView as useContextView, ViewContext, type View } fro
 
 type Action = PlayerEvent | { type: "reset" };
 
-const isTyping = (el: EventTarget | null) =>
-  el instanceof HTMLElement && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+// No instanceof here: keys also come from the chat window, whose elements belong to another window.
+const isTyping = (el: EventTarget | null) => {
+  const e = el as HTMLElement | null;
+  return !!e && (e.tagName === "INPUT" || e.tagName === "TEXTAREA" || e.isContentEditable === true);
+};
 
 /** "F9", "Ctrl+F9", "Ctrl+G", "*", "Space", "Delete", as lesson gates name them. On a Mac, Cmd counts as Ctrl. */
 export function keyName(e: KeyboardEvent): string | null {
@@ -53,6 +58,28 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
   const [dragging, setDragging] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ target: string; x: number; y: number } | null>(null);
   const disasm = useRef<DisassemblyHandle>(null);
+  // The chat can move to its own window (a second screen). It always renders into this one element,
+  // which moves between the rail and that window, so a conversation in progress carries on.
+  const chatWindow = usePanelWindow("pire-ask-" + lesson.id, "Ask · " + lesson.number + " " + lesson.title, "bg-guide text-fg antialiased");
+  const [chatHost] = useState(() => {
+    const el = document.createElement("div");
+    el.className = "flex min-h-0 grow flex-col";
+    return el;
+  });
+  const chatDock = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const parent = chatWindow.win ? chatWindow.win.document.body : chatDock.current;
+    if (parent && chatHost.parentNode !== parent) parent.append(chatHost);
+  }, [chatWindow.win, chatHost]);
+  const chatWin = useRef(chatWindow.win);
+  chatWin.current = chatWindow.win;
+  /** Show the chat: the Ask tab, or its window when it has one. */
+  const showAsk = useCallback(() => {
+    if (chatWin.current) {
+      setAskOpened(true);
+      chatWin.current.focus();
+    } else setRail("ask");
+  }, []);
   const { lesson: ls, session } = state;
   const step = lesson.steps[ls.stepIndex];
   const rec = getRecording(session.recording);
@@ -136,8 +163,8 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
   // Debugger keys go to the lesson, never to the browser.
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+  const onKey = useCallback(
+    (e: KeyboardEvent) => {
       if (e.altKey || (e.metaKey && !IS_MAC)) return;
       const ctrl = e.ctrlKey || e.metaKey;
       // Function keys and Ctrl+G work from anywhere, like the real tools' global shortcuts; other keys belong to the text box.
@@ -154,20 +181,31 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
       }
       // Leave the browser's own Cmd shortcuts (copy, reload, ...) alone.
       if (ctrl) return;
-      if (key === "Enter" && !(e.target instanceof HTMLButtonElement)) {
+      if (key === "Enter" && (e.target as HTMLElement | null)?.tagName !== "BUTTON") {
         e.preventDefault();
         dispatch({ type: "continue" });
       } else if (key === "S" && !lesson.challenge) {
         setSourceOpen((o) => !o);
       } else if (key === "?") {
-        setRail("ask");
+        showAsk();
       } else if (key === "Escape") {
         setRail("guide");
       }
-    };
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  useEffect(() => {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [onKey]);
+  // The debugger keys work from the chat window too, so you can step without switching screens.
+  useEffect(() => {
+    const w = chatWindow.win;
+    if (!w) return;
+    w.addEventListener("keydown", onKey);
+    return () => w.removeEventListener("keydown", onKey);
+  }, [chatWindow.win, onKey]);
 
   const spot = parseSpotlight(step?.spotlight);
   const matching = step?.gate.type === "match" && ls.phase === "asking";
@@ -325,13 +363,32 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
                 )}
               </div>
               <div className="flex w-85 shrink-0 flex-col border-l border-amber-line bg-guide">
-                <div role="tablist" aria-label="Guide or tutor" className="flex h-10 shrink-0 border-b border-amber-line">
-                  <RailTab active={rail === "guide"} onClick={() => setRail("guide")} align="left">
-                    Guide
-                  </RailTab>
-                  <RailTab active={rail === "ask"} onClick={() => setRail("ask")} align="right">
-                    Ask
-                  </RailTab>
+                <div className="flex h-10 shrink-0 border-b border-amber-line">
+                  <div role="tablist" aria-label="Guide or tutor" className="flex grow">
+                    <RailTab active={rail === "guide"} onClick={() => setRail("guide")} align="left">
+                      Guide
+                    </RailTab>
+                    <RailTab active={rail === "ask" && !chatWindow.win} onClick={showAsk} align="right">
+                      {chatWindow.win ? "Ask ↗" : "Ask"}
+                    </RailTab>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (chatWindow.win) {
+                        chatWindow.close();
+                        setRail("ask");
+                      } else if (chatWindow.open()) {
+                        setAskOpened(true);
+                        setRail("guide");
+                      }
+                    }}
+                    aria-label={chatWindow.win ? "Bring the chat back" : "Open the chat in its own window"}
+                    title={chatWindow.win ? "Bring the chat back" : "Open the chat in its own window"}
+                    className="flex w-10 shrink-0 items-center justify-center border-l border-amber-line text-muted hover:text-fg"
+                  >
+                    {chatWindow.win ? <DockIcon /> : <PopOutIcon />}
+                  </button>
                 </div>
                 <div className={cx("flex min-h-0 grow flex-col", rail !== "guide" && "hidden")}>
                   <Guide
@@ -340,23 +397,42 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
                     dispatch={dispatch}
                     misses={misses}
                     onTalk={() => {
-                      setRail("ask");
+                      showAsk();
                       setPrefill({ text: "I've missed this three times. Can you talk me through it?", n: Date.now() });
                     }}
                   />
                 </div>
-                {askOpened && (
-                  <div className={cx("flex min-h-0 grow flex-col", rail !== "ask" && "hidden")}>
-                    <Tutor
-                      lesson={lesson}
-                      context={tutorContext}
-                      prefill={prefill}
-                      active={rail === "ask"}
-                      onAsk={() => setTutorPoints(new Set())}
-                      onGuide={() => setRail("guide")}
-                    />
-                  </div>
-                )}
+                <div ref={chatDock} className={cx("flex min-h-0 grow flex-col", (rail !== "ask" || chatWindow.win) && "hidden")} />
+                {askOpened &&
+                  createPortal(
+                    <>
+                      {chatWindow.win && (
+                        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-amber-line pr-2 pl-5">
+                          <span className="font-mono text-xs text-amber">{lesson.number}</span>
+                          <span className="min-w-0 grow truncate text-[13px] font-medium text-fg">{lesson.title}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              chatWindow.close();
+                              setRail("ask");
+                            }}
+                            className="flex h-7 items-center gap-1.5 rounded-md border border-amber-line px-2.5 text-xs text-fg hover:border-amber-dim"
+                          >
+                            <DockIcon /> Back to the lesson
+                          </button>
+                        </div>
+                      )}
+                      <Tutor
+                        lesson={lesson}
+                        context={tutorContext}
+                        prefill={prefill}
+                        active={rail === "ask" || !!chatWindow.win}
+                        onAsk={() => setTutorPoints(new Set())}
+                        onGuide={() => (chatWindow.win ? window.focus() : setRail("guide"))}
+                      />
+                    </>,
+                    chatHost,
+                  )}
               </div>
             </div>
 
@@ -399,6 +475,23 @@ function InfoLines() {
   );
 }
 
+
+function PopOutIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden>
+      <path d="M9.5 2.5h4v4M13.5 2.5 8 8M7 3.5H3.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden>
+      <rect x="2.5" y="3" width="11" height="10" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10 3v10" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
 
 /** Guide | Ask: the two halves of the rail's tab bar, each label hugging its outer edge. */
 function RailTab({ active, onClick, align, children }: { active: boolean; onClick(): void; align: "left" | "right"; children: string }) {
