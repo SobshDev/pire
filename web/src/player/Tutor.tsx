@@ -155,7 +155,7 @@ function TutorChat({ lesson, context, prefill, onAsk, onGuide, active }: TutorPr
           type="submit"
           aria-label="Send"
           disabled={busy || !draft.trim()}
-          className="flex size-9 shrink-0 items-center justify-center rounded-md bg-amber text-ink hover:brightness-110 disabled:bg-raised disabled:text-faint"
+          className="flex size-9 shrink-0 items-center justify-center rounded-md bg-amber-fill text-on-amber hover:brightness-110 disabled:bg-raised disabled:text-faint"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden>
             <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -189,7 +189,7 @@ function Suggestion({ children, onClick }: { children: ReactNode; onClick(): voi
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full border border-amber-line bg-[#1C160C] px-3 py-1.5 text-left text-[13px] text-fg hover:border-amber-dim"
+      className="rounded-full border border-amber-line bg-amber-bg px-3 py-1.5 text-left text-[13px] text-fg hover:border-amber-dim"
     >
       {children}
     </button>
@@ -198,7 +198,7 @@ function Suggestion({ children, onClick }: { children: ReactNode; onClick(): voi
 
 function UserBubble({ message }: { message: UIMessage }) {
   const text = message.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
-  return <p className="max-w-[85%] self-end rounded-xl rounded-br-sm bg-[#221E17] px-3.5 py-2 text-sm/5.5 whitespace-pre-wrap text-fg">{text}</p>;
+  return <p className="max-w-[85%] self-end rounded-xl rounded-br-sm bg-bubble px-3.5 py-2 text-sm/5.5 whitespace-pre-wrap text-fg">{text}</p>;
 }
 
 function Answer({ message }: { message: UIMessage }) {
@@ -278,7 +278,7 @@ function Thinking({ tool }: { tool: boolean }) {
     <p className="flex items-center gap-2 text-[13px] text-muted" role="status">
       <span className="flex gap-1" aria-hidden>
         {[0, 1, 2].map((i) => (
-          <span key={i} className="size-1.5 animate-pulse rounded-full bg-amber" style={{ animationDelay: i * 150 + "ms" }} />
+          <span key={i} className="size-1.5 animate-pulse rounded-full bg-amber-fill" style={{ animationDelay: i * 150 + "ms" }} />
         ))}
       </span>
       {tool ? "Looking at the debugger…" : "Thinking…"}
@@ -290,8 +290,8 @@ function ErrorNote({ error, onRetry, onGuide }: { error: Error; onRetry(): void;
   const message = errorText(error);
   const offline = message.includes("isn't set up");
   return (
-    <div className="relative overflow-hidden rounded-md bg-[#1C160C] py-3 pr-3.5 pl-4.5 text-sm/5.5 text-fg" role="alert">
-      <span className="absolute inset-y-0 left-0 w-0.75 bg-amber" />
+    <div className="relative overflow-hidden rounded-md bg-amber-bg py-3 pr-3.5 pl-4.5 text-sm/5.5 text-fg" role="alert">
+      <span className="absolute inset-y-0 left-0 w-0.75 bg-amber-fill" />
       <p className="mb-1 text-[13px] font-semibold text-amber">{message.includes("busy") ? "The tutor is busy" : offline ? "Tutor offline" : "No answer"}</p>
       <p className="text-muted">{message}</p>
       {offline ? (
@@ -329,7 +329,7 @@ function SignedOut({ onGuide }: { onGuide(): void }) {
         The tutor needs an account. Your progress in this lesson comes with you when you create one.
       </p>
       <div className="flex items-center gap-4">
-        <Link to="/register" search={{ redirect: here }} className="h-8 rounded-md bg-amber px-3 text-[13px]/8 font-medium text-ink">
+        <Link to="/register" search={{ redirect: here }} className="h-8 rounded-md bg-amber-fill px-3 text-[13px]/8 font-medium text-on-amber">
           Create account
         </Link>
         <Link to="/login" search={{ redirect: here }} className="text-[13px] text-fg hover:text-amber">

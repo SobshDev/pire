@@ -44,8 +44,8 @@ export function Code({ code }: { code: string }) {
   if (KEY.test(code)) {
     return <kbd className="rounded-sm border border-b-2 border-faint bg-raised px-1 py-px font-mono text-[0.8em] font-medium text-fg">{keyLabel(code)}</kbd>;
   }
-  if (REGISTER.test(code)) return <code className={cx(chip, "border-[#5EB0EF]/35 bg-[#5EB0EF]/10 text-[#9CCDF5]")}>{code}</code>;
-  if (NUMBER.test(code)) return <code className={cx(chip, "border-[#B58CF0]/35 bg-[#B58CF0]/10 text-[#CDB3F5]")}>{code}</code>;
+  if (REGISTER.test(code)) return <code className={cx(chip, "border-blue/35 bg-blue/10 text-blue-text")}>{code}</code>;
+  if (NUMBER.test(code)) return <code className={cx(chip, "border-violet/35 bg-violet/10 text-violet-text")}>{code}</code>;
   const [mnemonic, ...rest] = code.split(" ");
   if (mnemonic && isInstruction(code)) {
     return (
@@ -69,9 +69,9 @@ function Operands({ text }: { text: string }) {
     <>
       {(text.match(OPERAND_TOKEN) ?? []).map((t, i) => {
         const cls = REGISTER.test(t.toUpperCase()) && /^[a-z0-9]+$/i.test(t)
-          ? "text-[#9CCDF5]"
+          ? "text-blue-text"
           : HEX.test(t)
-            ? "text-[#CDB3F5]"
+            ? "text-violet-text"
             : SIZE_OR_SEGMENT.test(t) || t === "..."
               ? "text-muted"
               : t.startsWith("<")

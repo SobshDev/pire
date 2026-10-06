@@ -23,7 +23,7 @@ export function Pane({ id, label, className, children }: { id: PaneId; label: st
         "relative flex min-h-0 min-w-0 flex-col bg-panel transition-[opacity,box-shadow] duration-300",
         dim && "opacity-28",
         spot && "z-10 shadow-[0_0_0_1.5px_var(--color-amber)]",
-        isOver && "z-10 bg-[#FFB2240F] outline-1 outline-amber outline-dashed",
+        isOver && "z-10 bg-amber-fill/6 outline-1 outline-amber outline-dashed",
         className,
       )}
     >

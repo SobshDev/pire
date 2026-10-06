@@ -27,6 +27,82 @@
   --color-bad-bg: #2a1213;
   --color-paused: #f5d547;
   --color-paused-fg: #1a1600;
+
+  /* Fills and surfaces that used to be hardcoded in components. */
+  --color-amber-fill: #ffb224; /* buttons, medals, progress: amber with on-amber text */
+  --color-on-amber: #0d0c0a; /* text on amber-fill, medals, ok and chart fills */
+  --color-on-chart: #0d0c0a; /* text on section-colored diagram bars */
+  --color-amber-bg: #1c160c; /* amber-tinted cards, chips, active rail tab */
+  --color-hover: #1a1815; /* row hover, context menu */
+  --color-bubble: #221e17; /* the learner's tutor messages */
+  --color-console: #d7d2c8; /* program console output */
+
+  /* Structure colors: hex overlay, PE diagrams, stack frames, register and number chips. */
+  --color-blue: #5eb0ef;
+  --color-blue-text: #9ccdf5;
+  --color-violet: #b58cf0;
+  --color-violet-text: #cdb3f5;
+  --color-orange: #e58a4e;
+  --color-orange-text: #f0ae85;
+  --color-green-text: #a9e3ac;
+  --color-pink: #f06ba8;
+  --color-teal: #4cc3b5;
+  --color-yellow: #e5c84d;
+  --color-slate: #6c8aa9;
+
+  /* C source view. */
+  --color-syn-plain: #d8d1c4;
+  --color-syn-keyword: #e0a040;
+  --color-syn-string: #c7b98f;
+}
+
+/* Light mode: the same names with daylight values. theme.ts sets data-theme on <html>. */
+:root {
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-ink: #f7f6f3;
+  --color-panel: #ffffff;
+  --color-raised: #f2f0eb;
+  --color-line: #e6e3dc;
+  --color-fg: #1a1814;
+  --color-muted: #6e685d;
+  --color-faint: #a8a298;
+  --color-comment: #7a7265;
+  --color-mnemonic: #4a3d26;
+  --color-amber: #a35f00;
+  --color-amber-dim: #e8b25a;
+  --color-amber-line: #f0d49a;
+  --color-guide: #fbf8f2;
+  --color-rip: #fff3d9;
+  --color-ok: #2e7d32;
+  --color-ok-bg: #eaf6e8;
+  --color-bad: #ce2c31;
+  --color-bad-bg: #fdecec;
+
+  --color-on-amber: #1a1400;
+  --color-on-chart: #ffffff;
+  --color-amber-bg: #fff8e6;
+  --color-hover: #f2f0eb;
+  --color-bubble: #f2f0eb;
+  --color-console: #2b2720;
+
+  --color-blue: #1d6bb0;
+  --color-blue-text: #17598f;
+  --color-violet: #7a45c9;
+  --color-violet-text: #6a35b8;
+  --color-orange: #b0521a;
+  --color-orange-text: #9a4514;
+  --color-green-text: #2e7d32;
+  --color-pink: #b3306d;
+  --color-teal: #13857a;
+  --color-yellow: #9a7b00;
+  --color-slate: #4f6e8e;
+
+  --color-syn-plain: #2b2720;
+  --color-syn-keyword: #a35f00;
+  --color-syn-string: #7a6a3a;
 }
 
 @layer base {
@@ -53,10 +129,10 @@
 @keyframes pulse-ring {
   0%,
   100% {
-    box-shadow: inset 0 0 0 1.5px rgb(255 178 36 / 0.9);
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-amber) 90%, transparent);
   }
   50% {
-    box-shadow: inset 0 0 0 1.5px rgb(255 178 36 / 0.25);
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-amber) 25%, transparent);
   }
 }
 
@@ -81,8 +157,8 @@
   transform: translateY(-50%);
   padding: 0 4px;
   border-radius: 3px;
-  background: var(--color-amber);
-  color: var(--color-ink);
+  background: var(--color-amber-fill);
+  color: var(--color-on-amber);
   font: 600 9px/14px var(--font-mono);
   letter-spacing: 0.08em;
 }

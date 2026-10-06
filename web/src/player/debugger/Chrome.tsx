@@ -55,7 +55,7 @@ export function WindowChrome({ onTab, source }: { onTab(tab: Tab): void; source?
           ) : (
             <span key={i} className="flex h-6.5 w-6.5 items-center justify-center">
               <svg width="15" height="15" viewBox="0 0 16 16" className="opacity-55" aria-hidden>
-                <path d={d} fill="none" stroke="#4F493F" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d={d} fill="none" stroke="var(--color-faint)" strokeWidth="1.4" strokeLinejoin="round" />
               </svg>
             </span>
           ),
@@ -83,7 +83,7 @@ export function WindowChrome({ onTab, source }: { onTab(tab: Tab): void; source?
               )}
             >
               {t}
-              {isSource && active && <span className="size-1.25 shrink-0 rounded-full bg-amber" aria-hidden />}
+              {isSource && active && <span className="size-1.25 shrink-0 rounded-full bg-amber-fill" aria-hidden />}
             </button>
           );
         })}

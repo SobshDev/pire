@@ -3,8 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
     <title>pire · learn reverse engineering</title>
+    <script>
+      // Apply the saved theme before anything paints (see src/theme.ts).
+      (function () {
+        var mode = null;
+        try { mode = localStorage.getItem("pire.theme"); } catch (e) {}
+        var light = mode === "light" || (mode !== "dark" && window.matchMedia("(prefers-color-scheme: light)").matches);
+        document.documentElement.dataset.theme = light ? "light" : "dark";
+      })();
+    </script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2316120B'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='%23FFB224' font-family='system-ui'>π</text></svg>" />
   </head>
   <body class="bg-ink text-fg antialiased">

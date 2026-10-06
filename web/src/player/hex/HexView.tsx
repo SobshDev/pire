@@ -10,18 +10,18 @@ const ROW = 20;
 const h2 = (n: number) => n.toString(16).toUpperCase().padStart(2, "0");
 export const hexOff = (n: number) => n.toString(16).toUpperCase();
 
-/** Overlay colors by structure, so the DOS header always looks like the DOS header. */
+/** Overlay colors by structure, so the DOS header always looks like the DOS header. CSS variables, so they follow the theme. */
 export function groupColor(id: string): string {
-  if (id === "dos") return "#FFB224";
-  if (id === "stub" || id === "rich") return "#948D81";
-  if (id === "nt") return "#7DD181";
-  if (id === "file") return "#5EB0EF";
-  if (id === "opt") return "#B58CF0";
-  if (id === "dd") return "#4CC3B5";
-  if (id.startsWith("sec.")) return "#E58A4E";
-  if (id.startsWith("iat.")) return "#F06BA8";
-  if (id === "names") return "#E5C84D";
-  return "#6C8AA9";
+  if (id === "dos") return "var(--color-amber)";
+  if (id === "stub" || id === "rich") return "var(--color-muted)";
+  if (id === "nt") return "var(--color-ok)";
+  if (id === "file") return "var(--color-blue)";
+  if (id === "opt") return "var(--color-violet)";
+  if (id === "dd") return "var(--color-teal)";
+  if (id.startsWith("sec.")) return "var(--color-orange)";
+  if (id.startsWith("iat.")) return "var(--color-pink)";
+  if (id === "names") return "var(--color-yellow)";
+  return "var(--color-slate)";
 }
 
 /** Revealed overlay entries resolved against the file: the structures, and the fields inside them. */
@@ -37,7 +37,8 @@ export function useOverlay(file: PeFile, revealed: ReadonlySet<string>) {
   }, [file, revealed]);
 }
 
-const alpha = (color: string, a: number) => color + Math.round(a * 255).toString(16).padStart(2, "0");
+/** A structure color at partial strength. Colors are CSS variables, so mix instead of appending hex alpha. */
+const alpha = (color: string, a: number) => "color-mix(in srgb, " + color + " " + Math.round(a * 100) + "%, transparent)";
 
 export function HexView() {
   const view = useView();
@@ -108,7 +109,7 @@ export function HexView() {
         else setDrag({ anchor: o, cur: o });
       },
       onMouseEnter: () => dragRef.current && setDrag({ ...dragRef.current, cur: o }),
-      style: inSel(o) ? { backgroundColor: "#8A6516" } : color ? { backgroundColor: alpha(color, f ? 0.32 : 0.14) } : undefined,
+      style: inSel(o) ? { backgroundColor: "var(--color-amber-dim)" } : color ? { backgroundColor: alpha(color, f ? 0.32 : 0.14) } : undefined,
       className: cx(
         "cursor-default",
         pulse.some((p) => matchesTarget(p, id)) && "pulse-target",

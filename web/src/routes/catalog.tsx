@@ -1,61 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { catalog, getLesson, type CatalogLesson } from "@pire/content";
-import { meQuery, progressQuery, useLogout } from "../api/queries";
+import { meQuery, progressQuery } from "../api/queries";
 import type { LessonProgress } from "../api/client";
 import { savedMedal, type Medal } from "../engine/lesson";
-import { cx, GitHubMark, Logo, REPO_URL } from "../ui/bits";
+import { cx, GitHubMark, REPO_URL } from "../ui/bits";
+import { SiteHeader } from "../ui/SiteHeader";
 
 const MEDAL_STYLE: Record<Medal, string> = {
-  gold: "bg-amber text-ink",
-  silver: "bg-[#C9C4BA] text-ink",
-  bronze: "bg-[#B07A4A] text-ink",
+  gold: "bg-amber-fill text-on-amber",
+  silver: "bg-[#C9C4BA] text-on-amber",
+  bronze: "bg-[#B07A4A] text-on-amber",
 };
 
 export function CatalogPage() {
   const { data: me } = useQuery(meQuery);
   const { data: progress = [] } = useQuery(progressQuery);
-  const logout = useLogout();
-  const navigate = useNavigate();
   const byLesson = new Map(progress.map((p) => [p.lesson_id, p]));
 
   return (
     <div className="min-h-full">
-      <header className="flex h-12 items-center gap-4 border-b border-amber-line bg-guide pr-4 pl-5">
-        <Logo />
-        <span className="text-[13px] text-muted">Learn reverse engineering on x64 Windows</span>
-        <div className="grow" />
-        <a
-          href={REPO_URL + "/blob/main/CONTRIBUTING.md"}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-1.5 text-xs text-fg hover:text-amber"
-        >
-          <GitHubMark className="size-3.5" />
-          Contribute
-        </a>
-        {me ? (
-          <>
-            <span className="text-[13px] text-muted">{me.display_name}</span>
-            <button
-              type="button"
-              onClick={() => logout.mutate(undefined, { onSuccess: () => navigate({ to: "/" }) })}
-              className="h-7 rounded-md border border-amber-line px-2.5 text-xs text-fg hover:border-amber-dim"
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" className="text-xs text-fg hover:text-amber">
-              Sign in
-            </Link>
-            <Link to="/register" className="h-7 rounded-md bg-amber px-2.5 text-xs/7 font-medium text-ink">
-              Create account
-            </Link>
-          </>
-        )}
-      </header>
+      <SiteHeader />
 
       <main className="mx-auto max-w-3xl px-6 py-14">
         <p className="font-mono text-[11px] tracking-[0.12em] text-amber uppercase">Start here</p>
@@ -102,7 +67,7 @@ export function CatalogPage() {
               href={REPO_URL + "/blob/main/CONTRIBUTING.md"}
               target="_blank"
               rel="noreferrer"
-              className="flex h-7 items-center gap-1.5 rounded-md bg-amber px-2.5 font-medium text-ink"
+              className="flex h-7 items-center gap-1.5 rounded-md bg-amber-fill px-2.5 font-medium text-on-amber"
             >
               <GitHubMark className="size-3.5" />
               How to contribute

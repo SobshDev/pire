@@ -95,7 +95,7 @@ function Row({
     cx(
       "flex h-5.5 items-center whitespace-nowrap",
       isRip && "bg-rip shadow-[inset_0_0_0_1px_var(--color-amber-dim)]",
-      !isRip && "hover:bg-[#1A1815]",
+      !isRip && "hover:bg-hover",
     ),
   );
   return (
