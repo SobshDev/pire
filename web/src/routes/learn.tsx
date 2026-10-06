@@ -11,7 +11,7 @@ export function LearnPage() {
   const lesson = getLesson(lessonId)!;
   const { data: progress } = useSuspenseQuery(progressQuery);
   const saved = progress.find((p) => p.lesson_id === lesson.id);
-  const state = (saved?.state ?? {}) as { mistakes?: unknown; keys?: unknown; hintsUsed?: unknown; session?: unknown };
+  const state = (saved?.state ?? {}) as { mistakes?: unknown; keys?: unknown; hintsUsed?: unknown; session?: unknown; history?: unknown; step?: unknown };
   const resume = saved
     ? {
         stepIndex: saved.beat_index,
@@ -20,6 +20,9 @@ export function LearnPage() {
         keys: Array.isArray(state.keys) ? state.keys.filter((k): k is string => typeof k === "string") : [],
         // initialState checks the saved session against the recording and falls back if it doesn't fit.
         session: state.session && typeof state.session === "object" ? (state.session as Session) : undefined,
+        // Checked by initialState too: whatever doesn't fit is dropped.
+        history: state.history,
+        step: state.step,
       }
     : undefined;
   const earned = lesson.challenge && saved ? savedMedal(saved.state, !!saved.completed_at) : undefined;

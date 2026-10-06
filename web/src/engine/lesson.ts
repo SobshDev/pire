@@ -45,10 +45,19 @@ export interface LessonState {
 export interface PlayerState {
   lesson: LessonState;
   session: Session;
+  /** The steps already left, newest last, so Back can return to them. */
+  history: StepSnapshot[];
+}
+
+/** A finished step as it looked when the learner moved on: its answers and the debugger. The log is left out. */
+export interface StepSnapshot {
+  lesson: Pick<LessonState, "stepIndex" | "placed" | "chosen" | "ordered" | "answered" | "filled" | "unfilled" | "banner">;
+  session: Session;
 }
 
 export type PlayerEvent =
   | { type: "continue" }
+  | { type: "back" }
   | { type: "hint" }
   | { type: "click"; target: string }
   | { type: "dblclick"; target: string }
@@ -73,6 +82,10 @@ export interface Resume {
   mistakes?: number;
   hintsUsed?: number;
   session?: Session;
+  /** Saved StepSnapshots; checked before use. */
+  history?: unknown;
+  /** The current step's answers and phase; checked before use. */
+  step?: unknown;
 }
 
 /* ------------------------------------------------------------------ */
@@ -171,7 +184,7 @@ function validSession(s: Session | undefined): s is Session {
 export function initialState(lesson: Lesson, resume?: Resume): PlayerState {
   const stepIndex = Math.min(Math.max(resume?.stepIndex ?? 0, 0), lesson.steps.length);
   const session = validSession(resume?.session) ? { ...resume.session, goto: null } : sessionAt(lesson, stepIndex);
-  return {
+  const state: PlayerState = {
     lesson: {
       stepIndex,
       phase: "asking",
@@ -190,7 +203,47 @@ export function initialState(lesson: Lesson, resume?: Resume): PlayerState {
       done: stepIndex >= lesson.steps.length,
     },
     session,
+    history: lesson.challenge ? [] : validHistory(resume?.history, stepIndex),
   };
+  const saved = resume?.step as Partial<StepSnapshot["lesson"]> & { phase?: unknown } | undefined;
+  if (!lesson.challenge && saved && typeof saved === "object" && saved.phase === "success" && saved.stepIndex === stepIndex && !state.lesson.done) {
+    state.lesson = { ...state.lesson, ...snapshotFields(saved), phase: "success" };
+  }
+  return state;
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
+const isStringRecord = (v: unknown): v is Record<string, string> => isRecord(v) && Object.values(v).every((x) => typeof x === "string");
+
+/** The gate fields of a saved step, with anything malformed replaced by its empty value. */
+function snapshotFields(v: Record<string, unknown>): Omit<StepSnapshot["lesson"], "stepIndex"> {
+  return {
+    placed: isStringRecord(v.placed) ? v.placed : {},
+    chosen: typeof v.chosen === "string" ? v.chosen : null,
+    ordered: isStringArray(v.ordered) ? v.ordered : [],
+    answered: typeof v.answered === "number" && Number.isInteger(v.answered) ? v.answered : 0,
+    filled: isStringRecord(v.filled) ? v.filled : {},
+    unfilled: isStringArray(v.unfilled) ? v.unfilled : [],
+    banner: typeof v.banner === "string" ? v.banner : null,
+  };
+}
+
+/** Saved history, if every entry fits and the steps run in order before the current one. Otherwise none. */
+function validHistory(v: unknown, stepIndex: number): StepSnapshot[] {
+  if (!Array.isArray(v)) return [];
+  const out: StepSnapshot[] = [];
+  let last = -1;
+  for (const e of v) {
+    if (!isRecord(e) || !isRecord(e.lesson)) return [];
+    const i = e.lesson.stepIndex;
+    if (typeof i !== "number" || !Number.isInteger(i) || i <= last || i >= stepIndex) return [];
+    const session = e.session as Session | undefined;
+    if (!validSession(session)) return [];
+    out.push({ lesson: { stepIndex: i, ...snapshotFields(e.lesson) }, session: { ...session, log: [], goto: null } });
+    last = i;
+  }
+  return out;
 }
 
 export function currentStep(lesson: Lesson, state: PlayerState): Step | undefined {
@@ -368,8 +421,14 @@ export function checkGoal(rec: Recording, s: Session, check: Check): boolean {
 function advance(lesson: Lesson, state: PlayerState): PlayerState {
   const stepIndex = state.lesson.stepIndex + 1;
   const next = lesson.steps[stepIndex];
+  const l = state.lesson;
+  const left: StepSnapshot = {
+    lesson: { stepIndex: l.stepIndex, placed: l.placed, chosen: l.chosen, ordered: l.ordered, answered: l.answered, filled: l.filled, unfilled: l.unfilled, banner: l.banner },
+    session: { ...state.session, log: [], goto: null },
+  };
   return {
     session: next?.setup ? applySetup(state.session, next.setup, lesson.recording) : state.session,
+    history: [...state.history, left],
     lesson: {
       ...state.lesson,
       stepIndex,
@@ -430,7 +489,19 @@ function afterFree(lesson: Lesson, state: PlayerState, step: Step): PlayerState 
   return checkGoal(getRecording(state.session.recording), state.session, step.gate.check) ? pass(lesson, state, step) : state;
 }
 
+/** Back to the last step left, as it looked when it was finished. Mistakes, hints and keys stay as they are. */
+function back(lesson: Lesson, state: PlayerState): PlayerState {
+  const last = state.history.at(-1);
+  if (lesson.challenge || !last) return state;
+  return {
+    history: state.history.slice(0, -1),
+    session: { ...last.session, log: state.session.log, goto: null },
+    lesson: { ...state.lesson, ...last.lesson, phase: "success", feedback: null, hintsShown: 0, done: false },
+  };
+}
+
 export function reduce(lesson: Lesson, state: PlayerState, event: PlayerEvent): PlayerState {
+  if (event.type === "back") return back(lesson, state);
   const step = currentStep(lesson, state);
   const l = state.lesson;
   const rec = getRecording(state.session.recording);

@@ -132,18 +132,21 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
     }
     const s = latest.current;
     if (lesson.challenge && s.lesson.done) best.current = bestMedal(best.current, medal(s.lesson.hintsUsed));
-    save.mutate({
-      beat_index: s.lesson.stepIndex,
-      completed: s.lesson.done,
-      // hintsUsed decides a challenge's medal, so it has to survive a reload.
-      state: {
-        mistakes: s.lesson.mistakes,
-        keys: s.lesson.keys,
-        hintsUsed: s.lesson.hintsUsed,
-        ...(best.current ? { medal: best.current } : {}),
-        session: { ...s.session, log: s.session.log.slice(-50) },
-      },
-    });
+    const l = s.lesson;
+    // hintsUsed decides a challenge's medal, so it has to survive a reload.
+    const state = {
+      mistakes: l.mistakes,
+      keys: l.keys,
+      hintsUsed: l.hintsUsed,
+      ...(best.current ? { medal: best.current } : {}),
+      session: { ...s.session, log: s.session.log.slice(-50) },
+      // Back keeps working after a reload: the steps already left, and how the current one looks.
+      history: s.history,
+      step: { stepIndex: l.stepIndex, phase: l.phase, placed: l.placed, chosen: l.chosen, ordered: l.ordered, answered: l.answered, filled: l.filled, unfilled: l.unfilled, banner: l.banner },
+    };
+    // The server takes 64 KB of state; give up the oldest steps first.
+    while (state.history.length > 0 && JSON.stringify(state).length > 60_000) state.history = state.history.slice(1);
+    save.mutate({ beat_index: l.stepIndex, completed: l.done, state });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ls.stepIndex, ls.done]);
 
@@ -394,6 +397,7 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
                   <Guide
                     lesson={lesson}
                     state={ls}
+                    canGoBack={state.history.length > 0}
                     dispatch={dispatch}
                     misses={misses}
                     onTalk={() => {

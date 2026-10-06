@@ -10,6 +10,8 @@ import { Diagram } from "./Diagrams";
 interface GuideProps {
   lesson: Lesson;
   state: LessonState;
+  /** Whether there is an earlier step to go back to. */
+  canGoBack?: boolean;
   dispatch(event: PlayerEvent): void;
   /** Wrong answers on the current step. */
   misses: number;
@@ -17,7 +19,7 @@ interface GuideProps {
   onTalk(): void;
 }
 
-export function Guide({ lesson, state, dispatch, misses, onTalk }: GuideProps) {
+export function Guide({ lesson, state, canGoBack = false, dispatch, misses, onTalk }: GuideProps) {
   if (lesson.challenge) return <ChallengeGuide lesson={lesson} state={state} dispatch={dispatch} misses={misses} onTalk={onTalk} />;
   const step = lesson.steps[state.stepIndex];
   if (!step) return <aside className="min-h-0 grow bg-guide" />;
@@ -32,7 +34,19 @@ export function Guide({ lesson, state, dispatch, misses, onTalk }: GuideProps) {
       <div className="shrink-0 px-5 pt-4">
         <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.12em] uppercase">
           <span className="text-amber" data-testid="guide-kicker">{kicker}</span>
-          <span className="text-muted">{position + " / " + sameSection.length}</span>
+          <span className="flex items-center gap-3">
+            {canGoBack && (
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "back" })}
+                className="text-muted transition-colors hover:text-amber"
+                title="Go back to the previous step"
+              >
+                ← Back
+              </button>
+            )}
+            <span className="text-muted">{position + " / " + sameSection.length}</span>
+          </span>
         </div>
         <div className="mt-2.5 flex gap-0.75">
           {lesson.steps.map((s, i) => (
