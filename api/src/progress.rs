@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// Largest lesson state blob we accept, in bytes of JSON.
-const MAX_STATE_BYTES: usize = 16 * 1024;
+const MAX_STATE_BYTES: usize = 64 * 1024;
 
 #[derive(Serialize, ToSchema, sqlx::FromRow)]
 pub struct LessonProgress {
