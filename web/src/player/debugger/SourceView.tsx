@@ -31,9 +31,9 @@ export function tokenize(line: string): Token[] {
 }
 
 const TOKEN_CLASS: Record<Token["kind"], string> = {
-  plain: "text-[#D8D1C4]",
-  keyword: "text-[#E0A040]",
-  string: "text-[#C7B98F]",
+  plain: "text-syn-plain",
+  keyword: "text-syn-keyword",
+  string: "text-syn-string",
   comment: "text-muted",
 };
 
@@ -106,7 +106,7 @@ export function SourceView({ source, live }: { source: SourceFile; live: boolean
                 className={cx("flex h-5 w-max min-w-full items-center", hot && "bg-rip shadow-[inset_2px_0_0_var(--color-amber)]")}
               >
                 <span className="flex h-5 w-11 shrink-0 items-center justify-end pr-1.5">
-                  {hot && <span className="rounded-xs bg-amber px-0.75 font-mono text-[9px]/3 font-semibold text-ink">RIP</span>}
+                  {hot && <span className="rounded-xs bg-amber-fill px-0.75 font-mono text-[9px]/3 font-semibold text-on-amber">RIP</span>}
                 </span>
                 <span className={cx("w-8.5 shrink-0 pr-3.5 text-right font-mono text-xs/5", hot ? "text-amber" : "text-faint")}>{n}</span>
                 <span className="grow pr-6 font-mono text-[13px]/5 whitespace-pre">

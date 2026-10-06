@@ -12,6 +12,7 @@ import { meQuery, progressQuery } from "./api/queries";
 import { CatalogPage } from "./routes/catalog";
 import { LoginPage, RegisterPage } from "./routes/auth";
 import { LearnPage } from "./routes/learn";
+import { SettingsPage } from "./routes/settings";
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -71,7 +72,19 @@ const learnRoute = createRoute({
   component: LearnPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute, registerRoute, learnRoute]);
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings",
+  // back: the lesson that opened Settings, so its back link returns there.
+  validateSearch: (search: Record<string, unknown>): { back?: string } => {
+    const back = safeRedirect(search.back);
+    return back ? { back } : {};
+  },
+  loader: ({ context }) => context.queryClient.ensureQueryData(meQuery),
+  component: SettingsPage,
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, loginRoute, registerRoute, learnRoute, settingsRoute]);
 
 export function createAppRouter(queryClient: QueryClient) {
   return createRouter({ routeTree, context: { queryClient }, defaultPreload: "intent" });

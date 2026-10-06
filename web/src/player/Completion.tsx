@@ -6,9 +6,9 @@ import { cx, Keycap, lessonFeedbackUrl } from "../ui/bits";
 import { SourceCard } from "./Guide";
 
 const MEDALS = {
-  gold: { label: "Gold", note: "No hints used.", className: "border-amber bg-amber text-ink" },
-  silver: { label: "Silver", note: "One or two hints.", className: "border-[#C9C4BA] bg-[#C9C4BA] text-ink" },
-  bronze: { label: "Bronze", note: "Three hints.", className: "border-[#B07A4A] bg-[#B07A4A] text-ink" },
+  gold: { label: "Gold", note: "No hints used.", className: "border-amber bg-amber-fill text-on-amber" },
+  silver: { label: "Silver", note: "One or two hints.", className: "border-[#C9C4BA] bg-[#C9C4BA] text-on-amber" },
+  bronze: { label: "Bronze", note: "Three hints.", className: "border-[#B07A4A] bg-[#B07A4A] text-on-amber" },
 } as const;
 
 export function Completion({ lesson, state, onReplay }: { lesson: Lesson; state: LessonState; onReplay(): void }) {
@@ -70,7 +70,7 @@ export function Completion({ lesson, state, onReplay }: { lesson: Lesson; state:
         </ol>
 
         <div className="mt-8 flex items-center gap-3">
-          <Link to="/" className="flex h-9 items-center rounded-md bg-amber px-4 text-sm font-medium text-ink">
+          <Link to="/" className="flex h-9 items-center rounded-md bg-amber-fill px-4 text-sm font-medium text-on-amber">
             Back to the course
           </Link>
           <button

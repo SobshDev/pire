@@ -51,7 +51,7 @@ function Breakpoints() {
 
 function BpRow({ bp }: { bp: Breakpoint }) {
   const view = useView();
-  const { props, selected } = useTarget("bp:" + bp.kind + ":" + bp.address, "tabview", "flex items-center hover:bg-[#1A1815]");
+  const { props, selected } = useTarget("bp:" + bp.kind + ":" + bp.address, "tabview", "flex items-center hover:bg-hover");
   const sizes = { 1: "byte", 2: "word", 4: "dword", 8: "qword" } as const;
   return (
     <div {...props} className={cx(props.className, selected && "bg-raised", !bp.enabled && "text-faint")}>
@@ -92,7 +92,7 @@ function References() {
 function RefRow({ address, text }: { address: string; text: string }) {
   const view = useView();
   const row = rowAt(view.rec, address)?.row;
-  const { props, selected } = useTarget("ref:" + address, "tabview", "flex items-center hover:bg-[#1A1815]");
+  const { props, selected } = useTarget("ref:" + address, "tabview", "flex items-center hover:bg-hover");
   return (
     <div {...props} className={cx(props.className, selected && "bg-raised")}>
       <span className="w-40 px-2 text-muted">{address}</span>
@@ -121,7 +121,7 @@ function Log() {
 }
 
 function LogLine({ id, text }: { id: string; text: string }) {
-  const { props, selected } = useTarget(id, "tabview", "hover:bg-[#1A1815]");
+  const { props, selected } = useTarget(id, "tabview", "hover:bg-hover");
   return (
     <p {...props} className={cx(props.className, selected && "bg-raised text-fg")}>
       {text}
@@ -147,7 +147,7 @@ function MemoryMap() {
 
 function MapLine({ row }: { row: NonNullable<ReturnType<typeof useView>["rec"]["memoryMap"]>[number] }) {
   const own = row.address.startsWith("00000001400");
-  const { props, selected } = useTarget("mem:" + row.address, "tabview", "flex items-center hover:bg-[#1A1815]");
+  const { props, selected } = useTarget("mem:" + row.address, "tabview", "flex items-center hover:bg-hover");
   return (
     <div {...props} className={cx(props.className, selected && "bg-raised", own ? "text-fg" : "text-muted")}>
       <span className="w-40 px-2">{row.address}</span>
@@ -177,7 +177,7 @@ function CallStack() {
 }
 
 function CallLine({ i, slot, to, from, comment }: { i: number; slot: string; to: string; from: string | null; comment: string }) {
-  const { props, selected } = useTarget("callstack:" + i, "tabview", "flex items-center hover:bg-[#1A1815]");
+  const { props, selected } = useTarget("callstack:" + i, "tabview", "flex items-center hover:bg-hover");
   return (
     <div {...props} className={cx(props.className, selected && "bg-raised")}>
       <span className="w-40 px-2 text-muted">{slot}</span>

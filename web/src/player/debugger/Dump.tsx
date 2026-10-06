@@ -47,7 +47,7 @@ export function Dump() {
 }
 
 function Byte({ address, value, changed }: { address: string; value: number | null; changed: boolean }) {
-  const { props, selected } = useTarget("dump:byte:" + address, "dump", "w-6 text-center hover:bg-[#1A1815]");
+  const { props, selected } = useTarget("dump:byte:" + address, "dump", "w-6 text-center hover:bg-hover");
   return (
     <span {...props} className={cx(props.className, selected && "bg-raised", changed ? "text-bad" : value === null ? "text-faint" : "text-fg")}>
       {value === null ? "??" : hex2(value)}
@@ -56,7 +56,7 @@ function Byte({ address, value, changed }: { address: string; value: number | nu
 }
 
 function Ascii({ address, text }: { address: string; text: string }) {
-  const { props, selected } = useTarget("dump:ascii:" + address, "dump", "px-1 text-mnemonic hover:bg-[#1A1815]");
+  const { props, selected } = useTarget("dump:ascii:" + address, "dump", "px-1 text-mnemonic hover:bg-hover");
   return (
     <span {...props} className={cx(props.className, selected && "bg-raised")}>
       {text}

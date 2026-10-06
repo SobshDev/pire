@@ -111,7 +111,7 @@ function Fields({ node }: { node: string }) {
 
 function FieldRow({ f }: { f: PeField }) {
   const view = useView();
-  const { props } = useTarget("pe:field:" + f.id, "pedetail", "hover:bg-[#1A1815]");
+  const { props } = useTarget("pe:field:" + f.id, "pedetail", "hover:bg-hover");
   const active = view.session.peField === f.id;
   return (
     <tr {...props} className={cx(props.className, active && "bg-raised")}>
@@ -182,7 +182,7 @@ function Sections() {
 
 function SecCell({ id, text }: { id: string; text: string }) {
   const view = useView();
-  const { props } = useTarget("pe:sec:" + id, "pedetail", "px-3 hover:bg-[#1A1815]");
+  const { props } = useTarget("pe:sec:" + id, "pedetail", "px-3 hover:bg-hover");
   const active = view.session.peField === "sec:" + id;
   return (
     <td {...props} className={cx(props.className, active ? "bg-raised text-amber" : "text-fg")}>
@@ -236,7 +236,7 @@ function Imports() {
 }
 
 function DllRow({ dll, count, ilt, iat, active }: { dll: string; count: number; ilt: number; iat: number; active: boolean }) {
-  const { props } = useTarget("pe:imp:" + dll, "pedetail", "hover:bg-[#1A1815]");
+  const { props } = useTarget("pe:imp:" + dll, "pedetail", "hover:bg-hover");
   return (
     <tr {...props} className={cx(props.className, active && "bg-raised")}>
       <td className={cx("px-3 whitespace-nowrap", active ? "text-amber" : "text-fg")}>{dll}</td>
@@ -248,7 +248,7 @@ function DllRow({ dll, count, ilt, iat, active }: { dll: string; count: number; 
 }
 
 function FuncRow({ dll, name, slot, hint, thunk }: { dll: string; name: string; slot: number; hint: number; thunk: number }) {
-  const { props, selected } = useTarget("pe:imp:" + dll + ":" + name, "pedetail", "hover:bg-[#1A1815]");
+  const { props, selected } = useTarget("pe:imp:" + dll + ":" + name, "pedetail", "hover:bg-hover");
   return (
     <tr {...props} className={cx(props.className, selected && "bg-raised")}>
       <td className="px-3 text-muted">{h(slot)}</td>
@@ -296,7 +296,7 @@ function Exports() {
 }
 
 function ExportRow({ name, ordinal, rva }: { name: string; ordinal: number; rva: number }) {
-  const { props, selected } = useTarget("pe:exp:" + name, "pedetail", "hover:bg-[#1A1815]");
+  const { props, selected } = useTarget("pe:exp:" + name, "pedetail", "hover:bg-hover");
   return (
     <tr {...props} className={cx(props.className, selected && "bg-raised")}>
       <td className="px-3 text-muted">{ordinal}</td>

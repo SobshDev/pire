@@ -30,7 +30,7 @@ export function Stack() {
 function Row(row: { address: string; value: string; changed: boolean; comment: string; top: boolean }) {
   const { props, selected } = useTarget("stack:" + row.address, "stack", "flex items-center whitespace-nowrap");
   return (
-    <div {...props} className={cx(props.className, row.top ? "bg-rip" : selected ? "bg-raised" : "hover:bg-[#1A1815]")}>
+    <div {...props} className={cx(props.className, row.top ? "bg-rip" : selected ? "bg-raised" : "hover:bg-hover")}>
       <span className={cx("w-32 shrink-0 px-1.5", row.top ? "text-amber" : "text-muted")}>{row.address}</span>
       <span className={cx("w-31 shrink-0", row.changed ? "text-bad" : "text-fg")}>{row.value}</span>
       <span className="min-w-0 truncate pr-1.5 text-comment" title={row.comment}>

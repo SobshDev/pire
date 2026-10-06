@@ -90,7 +90,7 @@ export function ContextMenu({ x, y, items, onPick, onClose }: { x: number; y: nu
 function MenuList({ items, onPick }: { items: MenuItem[]; onPick(id: string): void }) {
   const [open, setOpen] = useState<number | null>(null);
   return (
-    <div role="menu" className="min-w-48 rounded-sm border border-line bg-[#1A1815] py-1 font-sans text-xs shadow-2xl">
+    <div role="menu" className="min-w-48 rounded-sm border border-line bg-hover py-1 font-sans text-xs shadow-2xl">
       {items.map((item, i) => (
         <div key={item.label} className="relative" onMouseEnter={() => setOpen(i)}>
           <button
@@ -168,7 +168,7 @@ export function ConsoleWindow() {
         <span className="h-2 w-2 rounded-full bg-faint" />
         {"C:\\pire\\" + view.rec.process.name}
       </div>
-      <pre ref={ref} className="pane-scroll min-h-0 grow overflow-y-auto px-2 py-1 font-mono text-xs/4.5 text-[#D7D2C8]" data-testid="console">
+      <pre ref={ref} className="pane-scroll min-h-0 grow overflow-y-auto px-2 py-1 font-mono text-xs/4.5 text-console" data-testid="console">
         {text}
         {!view.state.terminated && <span className="animate-pulse text-faint">_</span>}
       </pre>

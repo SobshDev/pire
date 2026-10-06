@@ -2,7 +2,7 @@ import { getFile, type PeFile } from "@pire/content";
 import { cx } from "../ui/bits";
 
 const h = (n: number | bigint) => n.toString(16).toUpperCase();
-const COLORS: Record<string, string> = { headers: "#948D81", ".text": "#E58A4E", ".rdata": "#5EB0EF", ".data": "#7DD181", ".pdata": "#B58CF0", ".reloc": "#F06BA8" };
+const COLORS: Record<string, string> = { headers: "var(--color-muted)", ".text": "var(--color-orange)", ".rdata": "var(--color-blue)", ".data": "var(--color-ok)", ".pdata": "var(--color-violet)", ".reloc": "var(--color-pink)" };
 
 /** Drawn explanations the guide shows for Module 2. They read vault.exe's real layout. */
 export function Diagram({ id }: { id: "rulers" | "alignment" | "mapping" | "timeline" }) {
@@ -37,7 +37,7 @@ function Rulers({ file }: { file: PeFile }) {
         <div key={name} className="flex items-center gap-3">
           <span className="w-20 shrink-0 text-fg">{name}</span>
           <span className="relative h-5 grow rounded-xs bg-raised">
-            <span className="absolute inset-y-0 w-1 rounded-xs bg-amber" style={{ left: name === "File offset" ? "38%" : name === "RVA" ? "52%" : "74%" }} />
+            <span className="absolute inset-y-0 w-1 rounded-xs bg-amber-fill" style={{ left: name === "File offset" ? "38%" : name === "RVA" ? "52%" : "74%" }} />
           </span>
           <span className="w-24 shrink-0 text-right font-mono text-amber">{value}</span>
         </div>
@@ -57,8 +57,8 @@ function Alignment({ file }: { file: PeFile }) {
         {parts.map((p) => (
           <span
             key={p.name}
-            className="absolute inset-y-0 flex items-center justify-center overflow-hidden border-r border-ink font-mono text-[10px] text-ink"
-            style={{ left: (p.from / total) * 100 + "%", width: (p.size / total) * 100 + "%", backgroundColor: COLORS[p.name] ?? "#6C8AA9" }}
+            className="absolute inset-y-0 flex items-center justify-center overflow-hidden border-r border-ink font-mono text-[10px] text-on-chart"
+            style={{ left: (p.from / total) * 100 + "%", width: (p.size / total) * 100 + "%", backgroundColor: COLORS[p.name] ?? "var(--color-slate)" }}
           >
             {p.size / total > 0.11 ? p.name : ""}
           </span>
@@ -109,7 +109,7 @@ function Mapping({ file }: { file: PeFile }) {
 
 function Block({ name, text, tall }: { name: string; text: string; tall?: boolean }) {
   return (
-    <div className={cx("flex items-center justify-between rounded-xs px-2 font-mono text-[10px] text-ink", tall ? "h-6" : "h-4.5")} style={{ backgroundColor: COLORS[name] ?? "#6C8AA9" }}>
+    <div className={cx("flex items-center justify-between rounded-xs px-2 font-mono text-[10px] text-on-chart", tall ? "h-6" : "h-4.5")} style={{ backgroundColor: COLORS[name] ?? "var(--color-slate)" }}>
       <span>{name}</span>
       <span>{text}</span>
     </div>
@@ -134,7 +134,7 @@ function Timeline() {
       <span className="absolute top-1 bottom-1 left-1 w-px bg-line" />
       {TIMELINE.map(([name, what]) => (
         <li key={name} className="relative">
-          <span className="absolute top-1.5 -left-3.75 size-2 rounded-full bg-amber" />
+          <span className="absolute top-1.5 -left-3.75 size-2 rounded-full bg-amber-fill" />
           <span className="text-fg">{name}</span> <span className="text-muted">{what}</span>
         </li>
       ))}

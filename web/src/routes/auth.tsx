@@ -39,7 +39,7 @@ function Submit({ pending, children }: { pending: boolean; children: ReactNode }
     <button
       type="submit"
       disabled={pending}
-      className="mt-2 h-10 rounded-md bg-amber text-sm font-medium text-ink disabled:opacity-60"
+      className="mt-2 h-10 rounded-md bg-amber-fill text-sm font-medium text-on-amber disabled:opacity-60"
     >
       {pending ? "One moment…" : children}
     </button>

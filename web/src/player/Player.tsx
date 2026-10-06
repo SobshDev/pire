@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useSaveProgress } from "../api/queries";
 import { bestMedal, DEBUG_KEYS, initialState, medal, reduce, revealed, toolOf, type Medal, type PlayerEvent, type PlayerState, type Resume } from "../engine/lesson";
-import { cx, IS_MAC, Keycap, Logo } from "../ui/bits";
+import { cx, GearIcon, IS_MAC, Keycap, Logo } from "../ui/bits";
 import { Completion } from "./Completion";
 import { CommandBar, StatusBar, WindowChrome } from "./debugger/Chrome";
 import { Disassembly, type DisassemblyHandle } from "./debugger/Disassembly";
@@ -258,6 +258,15 @@ export function Player({ lesson, resume, earned }: { lesson: Lesson; resume?: Re
                   Source <Keycap small>S</Keycap>
                 </button>
               )}
+              <Link
+                to="/settings"
+                search={{ back: "/learn/" + lesson.id }}
+                aria-label="Settings"
+                title="Settings"
+                className="flex size-7 items-center justify-center rounded-md border border-amber-line text-muted hover:border-amber-dim hover:text-fg"
+              >
+                <GearIcon className="size-3.75" />
+              </Link>
             </header>
 
             <div className="flex min-h-0 grow">
@@ -402,7 +411,7 @@ function RailTab({ active, onClick, align, children }: { active: boolean; onClic
       className={cx(
         "-mb-px flex flex-1 items-center border-b-2 px-5 text-[13px] font-medium transition-colors",
         align === "left" ? "justify-start" : "justify-end",
-        active ? "border-amber bg-[#1E180E] text-fg" : "border-transparent text-muted hover:text-fg",
+        active ? "border-amber bg-amber-bg text-fg" : "border-transparent text-muted hover:text-fg",
       )}
     >
       {children}

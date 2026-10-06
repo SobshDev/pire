@@ -41,7 +41,7 @@ export function Guide({ lesson, state, dispatch, misses, onTalk }: GuideProps) {
               className={cx(
                 "h-1 grow rounded-full transition-colors duration-300",
                 i < state.stepIndex || (i === state.stepIndex && state.phase === "success")
-                  ? "bg-amber"
+                  ? "bg-amber-fill"
                   : i === state.stepIndex
                     ? "bg-amber-dim"
                     : "bg-line",
@@ -63,7 +63,7 @@ export function Guide({ lesson, state, dispatch, misses, onTalk }: GuideProps) {
             className="flex flex-col gap-4"
           >
             {state.banner && (
-              <p className="self-start rounded-full border border-amber-dim bg-[#1C160C] px-3 py-1 font-mono text-[11px] text-amber" data-testid="banner">
+              <p className="self-start rounded-full border border-amber-dim bg-amber-bg px-3 py-1 font-mono text-[11px] text-amber" data-testid="banner">
                 <Rich text={state.banner} />
               </p>
             )}
@@ -136,7 +136,7 @@ function ChallengeGuide({ lesson, state, dispatch, misses, onTalk }: GuideProps)
 
       <div className="pane-scroll min-h-0 grow overflow-y-auto px-5 pt-4 pb-6">
         {state.banner && (
-          <p className="mb-3 inline-block rounded-full border border-amber-dim bg-[#1C160C] px-3 py-1 font-mono text-[11px] text-amber" data-testid="banner">
+          <p className="mb-3 inline-block rounded-full border border-amber-dim bg-amber-bg px-3 py-1 font-mono text-[11px] text-amber" data-testid="banner">
             <Rich text={state.banner} />
           </p>
         )}
@@ -150,7 +150,7 @@ function ChallengeGuide({ lesson, state, dispatch, misses, onTalk }: GuideProps)
                 data-testid={"goal-" + (i + 1)}
                 className={cx(
                   "rounded-md border px-3 py-2.5",
-                  current ? "border-amber-dim bg-[#1C160C]" : "border-transparent",
+                  current ? "border-amber-dim bg-amber-bg" : "border-transparent",
                   !current && !done && "opacity-45",
                 )}
               >
@@ -158,7 +158,7 @@ function ChallengeGuide({ lesson, state, dispatch, misses, onTalk }: GuideProps)
                   <span
                     className={cx(
                       "flex size-4.5 shrink-0 items-center justify-center rounded-full border font-mono text-[10px]",
-                      done ? "border-ok bg-ok text-ink" : current ? "border-amber text-amber" : "border-line text-faint",
+                      done ? "border-ok bg-ok text-panel" : current ? "border-amber text-amber" : "border-line text-faint",
                     )}
                   >
                     {done ? "✓" : i + 1}
@@ -191,7 +191,7 @@ function ChallengeGuide({ lesson, state, dispatch, misses, onTalk }: GuideProps)
         <span className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Hint tokens</span>
         <span className="flex gap-1" aria-label={tokensLeft + " hint tokens left"}>
           {Array.from({ length: lesson.hintTokens }, (_, i) => (
-            <span key={i} className={cx("size-2.5 rounded-full", i < tokensLeft ? "bg-amber" : "bg-line")} />
+            <span key={i} className={cx("size-2.5 rounded-full", i < tokensLeft ? "bg-amber-fill" : "bg-line")} />
           ))}
         </span>
         <span className="grow" />
@@ -214,7 +214,7 @@ function Figure({ figure }: { figure: NonNullable<Step["figure"]> }) {
           <span className="w-20 shrink-0 font-sans text-[11px] text-muted">{row.label}</span>
           <span className="flex flex-wrap gap-x-1.5">
             {row.bytes.split(" ").map((b, i) => (
-              <span key={i} className={row.highlight.includes(i) ? "rounded-xs bg-amber px-0.5 text-ink" : "px-0.5 text-fg"}>
+              <span key={i} className={row.highlight.includes(i) ? "rounded-xs bg-amber-fill px-0.5 text-on-amber" : "px-0.5 text-fg"}>
                 {b}
               </span>
             ))}
@@ -227,7 +227,7 @@ function Figure({ figure }: { figure: NonNullable<Step["figure"]> }) {
 
 function ActionRow({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-md border border-amber-line bg-[#1C160C] px-3 py-2.5 text-sm text-amber">
+    <div className="flex items-center gap-2.5 rounded-md border border-amber-line bg-amber-bg px-3 py-2.5 text-sm text-amber">
       <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden className="shrink-0">
         <path d="M3 2l10 6-4.5 1.2L6.5 14z" fill="currentColor" />
       </svg>
@@ -339,7 +339,7 @@ function GateUI({ step, state, dispatch }: { step: Step; state: LessonState; dis
                 onClick={() => dispatch({ type: "order", label })}
                 className={cx(
                   "flex h-9 items-center gap-3 rounded-[18px] border px-4 text-left text-[13px]",
-                  picked ? "border-ok bg-ok-bg text-fg" : "border-amber-dim bg-[#1C160C] text-fg hover:border-amber",
+                  picked ? "border-ok bg-ok-bg text-fg" : "border-amber-dim bg-amber-bg text-fg hover:border-amber",
                 )}
               >
                 <span className="w-4 font-mono text-[11px] text-ok">{picked ? String((n >= 0 ? n : gate.items.indexOf(label)) + 1) : ""}</span>
@@ -434,7 +434,7 @@ function FillCard({ gate, state, dispatch }: { gate: Extract<Step["gate"], { typ
 }
 
 const primary =
-  "flex h-9 items-center justify-center gap-2 self-start rounded-md bg-amber px-4 text-sm font-medium text-ink hover:brightness-110";
+  "flex h-9 items-center justify-center gap-2 self-start rounded-md bg-amber-fill px-4 text-sm font-medium text-on-amber hover:brightness-110";
 
 function PredictInput({ placeholder, dispatch }: { placeholder: string; dispatch(e: PlayerEvent): void }) {
   const [value, setValue] = useState("");
@@ -468,9 +468,9 @@ export function ChipBody({ label, state }: { label: string; state: "idle" | "dra
       className={cx(
         "flex h-9 items-center justify-between gap-3 rounded-[18px] border px-4 text-[13px]",
         state === "placed" && "border-ok bg-ok-bg text-fg",
-        state === "idle" && "cursor-grab border-amber-dim bg-[#1C160C] text-fg hover:border-amber",
+        state === "idle" && "cursor-grab border-amber-dim bg-amber-bg text-fg hover:border-amber",
         state === "dragging" && "border-dashed border-line text-faint",
-        state === "overlay" && "cursor-grabbing border-amber bg-[#1C160C] text-fg shadow-2xl",
+        state === "overlay" && "cursor-grabbing border-amber bg-amber-bg text-fg shadow-2xl",
       )}
     >
       <span>{label}</span>
@@ -525,13 +525,13 @@ function Box({ tone, title, children }: { tone: "ok" | "wrong" | "hint" | "info"
         "relative overflow-hidden rounded-md py-3 pr-3.5 pl-4.5 text-sm/5.5 text-fg",
         tone === "ok" && "bg-ok-bg",
         tone === "wrong" && "bg-bad-bg",
-        (tone === "hint" || tone === "info") && "bg-[#1C160C]",
+        (tone === "hint" || tone === "info") && "bg-amber-bg",
       )}
     >
       <span
         className={cx(
           "absolute inset-y-0 left-0 w-0.75",
-          tone === "ok" ? "bg-ok" : tone === "wrong" ? "bg-bad" : "bg-amber",
+          tone === "ok" ? "bg-ok" : tone === "wrong" ? "bg-bad" : "bg-amber-fill",
         )}
       />
       <p className={cx("mb-1 text-[13px] font-semibold", tone === "ok" ? "text-ok" : tone === "wrong" ? "text-bad" : "text-amber")}>
@@ -571,11 +571,11 @@ export function SourceCard({ lesson, region }: { lesson: Lesson; region: string 
 }
 
 const FRAME_KIND: Record<string, string> = {
-  shadow: "border-[#5EB0EF]/50 bg-[#5EB0EF]/10 text-[#9CCDF5]",
-  ret: "border-amber-dim bg-[#1C160C] text-amber",
-  local: "border-[#7DD181]/50 bg-[#7DD181]/10 text-[#A9E3AC]",
-  arg: "border-[#B58CF0]/50 bg-[#B58CF0]/10 text-[#CDB3F5]",
-  saved: "border-[#E58A4E]/50 bg-[#E58A4E]/10 text-[#F0AE85]",
+  shadow: "border-blue/50 bg-blue/10 text-blue-text",
+  ret: "border-amber-dim bg-amber-bg text-amber",
+  local: "border-ok/50 bg-ok/10 text-green-text",
+  arg: "border-violet/50 bg-violet/10 text-violet-text",
+  saved: "border-orange/50 bg-orange/10 text-orange-text",
   pad: "border-line bg-panel text-faint",
   empty: "border-line border-dashed text-faint",
 };
